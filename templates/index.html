@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Tabs with Indicator Example</title>
+
+    <meta name="author" content="Codeconvey" />
+    
+    <link rel="stylesheet" href="../css/style.css">
+    <!--Only for demo purpose - no need to add.-->
+    <link rel="stylesheet" href="../css/demo.css" />
+    <link rel="stylesheet" href="../css/form-style.css" />
+
+	
+</head>
+<body>
+		
+<header class="ScriptHeader">
+    <div class="rt-container">
+    	<div class="col-rt-12">
+        	<div class="rt-heading">
+            	<h1>Tabs with Indicator Example</h1>
+                <p>Pure CSS tabs with indicator.</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<section>
+    <div class="rt-container">
+          <div class="col-rt-12">
+              <div class="Scriptcontent">
+              
+            <!-- Start Tabs HTML -->
+    		<div class="tabs">
+  
+  <input type="radio" id="tab1" name="tab-control" checked>
+  <input type="radio" id="tab2" name="tab-control">
+  <input type="radio" id="tab3" name="tab-control">  
+  <input type="radio" id="tab4" name="tab-control">
+  <ul>
+    <li title="Features"><label for="tab1" role="button"><span>Создание новой заявки</span></label></li>
+    <li title="Delivery Contents"><label for="tab2" role="button"><span>Список заявок</span></label></li>
+    <li title="Shipping"><label for="tab3" role="button"><span>Shipping</span></label></li>    <li title="Returns"><label for="tab4" role="button"><span>Returns</span></label></li>
+  </ul>
+  
+  <div class="slider"><div class="indicator"></div></div>
+  <div class="content">
+    <section>
+      <h2>Новая заявка</h2><p><div>
+        <form method="POST">
+          <label for="title">Название</label>
+          <input type="text" id="title" name="title" placeholder="Тема заявки" value={{.Title}}>
+      
+          <label for="description">Описание</label>
+          <input type="text" id="description" name="description" placeholder="Описание заявки" value={{.Description}}>
+      
+          <label for="severity">Критичность</label>
+          <select id="severity" name="severity" value={{.Severity}}>
+            <option value="5">5</option>
+            <option value="4">4</option>
+            <option value="3">3</option>
+            <option value="2">2</option>
+            <option value="1">1</option>
+          </select>
+        
+          <input type="submit" value="Создать">
+        </form>
+      </div></p></section>
+      <section>
+          <h2>Список заявок</h2>
+            <p>
+              {{range .TicketList}}
+              № заявки: <a href="tickets?id={{.Number}}">{{.Number}}</a></br>
+              Наименование: {{ .Title }}</br>
+              Описание: {{ .Description }}</br>
+              Статус: {{ .Status }}</br>
+              SLA: {{ .SLA}}</br></p><br>
+              {{ end }}</p>
+              
+            </p></section>
+        <section>
+          <h2>Shipping</h2>
+          <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Quam nemo ducimus eius, magnam error quisquam sunt voluptate labore, excepturi numquam! Alias libero optio sed harum debitis! Veniam, quia in eum.</p></section>
+    <section>
+          <h2>Returns</h2>
+         <p> Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ipsa dicta vero rerum? Eaque repudiandae architecto libero reprehenderit aliquam magnam ratione quidem? Nobis doloribus molestiae enim deserunt necessitatibus eaque quidem incidunt.</p></section>
+  </div>
+</div>
+<!-- End Tabs HTML -->
+           
+    		</div>
+		</div>
+    </div>
+</section>
+    <!-- Analytics -->
+
+	</body>
+</html>

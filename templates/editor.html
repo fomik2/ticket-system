@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width" />
+<title>Система заявок</title>
+<link rel="stylesheet"  type="text/css" href="../css/form-style.css">
+</head>
+<body>
+
+<h3>Редактирование заявки</h3>
+
+<div>
+  <form method="POST">
+    <label for="title">Название</label>
+    <input type="text" id="title" name="title" placeholder="Тема заявки" value={{.Title}}>
+
+    <label for="description">Описание</label>
+    <input type="text" id="description" name="description" placeholder="Описание заявки" value={{.Description}}>
+
+    <label for="severity">Критичность</label>
+    <select id="severity" name="severity" value={{.Severity}}>
+      <option value="5">5</option>
+      <option value="4">4</option>
+      <option value="3">3</option>
+      <option value="2">2</option>
+      <option value="1">1</option>
+    </select>
+  
+    <input type="submit" name="action" value="Редактировать">
+    <input type="submit" name="action" value="Удалить">
+
+  </form>
+</div>
+
+</body>
+</html>
