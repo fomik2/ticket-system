@@ -12,22 +12,25 @@ import (
 	"time"
 )
 
+/*Ticket описывает заявку*/
 type Ticket struct {
 	Title, Description, Status, CreatedAt, Severity string
 	SLA                                             time.Time
 	Number                                          uint32
 }
 
+/*formData передеается в темплейт при вызове editHandler или welcomeHandler*/
 type formData struct {
 	*Ticket
 	Errors     []string
 	TicketList []*Ticket
 }
 
-var tickets []*Ticket
+var tickets []*Ticket //tickets сожержит все тикеты, которые есть в системе
 
-var ticketNumbers uint32
+var ticketNumbers uint32 // счетчик заявок.
 
+//RemoveIndex удаляет из слайса элемент заявки по индексу
 func RemoveIndex(s []*Ticket, index int) []*Ticket {
 	if len(s) == 1 {
 		return []*Ticket{}
@@ -35,11 +38,13 @@ func RemoveIndex(s []*Ticket, index int) []*Ticket {
 	return append(s[:index], s[index+1:]...)
 }
 
+//ticketNumberPlus инкрементирует счетчик при создании заявки
 func ticketNumberPlus() uint32 {
 	ticketNumbers = ticketNumbers + 1
 	return ticketNumbers
 }
 
+//editHandler редактирование заявки
 func editHandler(writer http.ResponseWriter, r *http.Request) {
 	param1, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {
@@ -82,6 +87,7 @@ func editHandler(writer http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//welcomeHandler создание новой заявки и вывод всех заявок
 func welcomeHandler(writer http.ResponseWriter, r *http.Request) {
 	createTemplate, err := template.ParseFiles("./templates/index.html")
 	if err != nil {
