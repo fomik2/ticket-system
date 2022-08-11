@@ -1,0 +1,14 @@
+http:
+  port: ':5002'
+
+templates: 
+  basedir: './templates'
+  index: 'index.html'
+  editor: 'editor.html'
+
+files:
+  tasks: 'tickets.json'
+  counter: 'counter'
+
+css:
+  path: './css'

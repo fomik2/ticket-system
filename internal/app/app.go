@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -12,33 +12,17 @@ import (
 	"time"
 
 	"github.com/fomik2/ticket-system/config"
+	"github.com/fomik2/ticket-system/internal/entities"
 )
-
-/*Ticket описывает заявку*/
-type Ticket struct {
-	Title, Description, Status, CreatedAt, Severity string
-	SLA                                             time.Time
-	Number                                          uint32
-}
 
 /*formData передеается в темплейт при вызове editHandler или welcomeHandler*/
 type formData struct {
-	Ticket
+	entities.Ticket
 	Errors     []string
-	TicketList []Ticket
+	TicketList []entities.Ticket
 }
-
-var tickets []Ticket //tickets сожержит все тикеты, которые есть в системе
 
 var ticketNumbers uint32 // счетчик заявок.
-
-//RemoveIndex удаляет из слайса элемент заявки по индексу
-func RemoveIndex(s []Ticket, index int) []Ticket {
-	if len(s) == 1 {
-		return []Ticket{}
-	}
-	return append(s[:index], s[index+1:]...)
-}
 
 //ticketNumberPlus инкрементирует счетчик при создании заявки
 func ticketNumberPlus() uint32 {
@@ -48,6 +32,7 @@ func ticketNumberPlus() uint32 {
 
 //editHandler редактирование заявки
 func editHandler(writer http.ResponseWriter, r *http.Request) {
+	ticket := &entities.Ticket{}
 	param1, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {
 		log.Println("Something wrong with convertion string to int", err)
@@ -55,35 +40,35 @@ func editHandler(writer http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		createTemplate, err := template.ParseFiles("./templates/editor.html")
 		if err != nil {
-			log.Println("Проблема с загрузкой темплейта", err)
+			log.Panicln("Проблема с загрузкой темплейта", err)
 		}
-		for _, ticket := range tickets {
-			if ticket.Number == uint32(param1) {
-				createTemplate.Execute(writer, formData{
-					Ticket: ticket, Errors: []string{},
-				})
-			}
+		ticket, err := ticket.Get(param1)
+		if err != nil {
+			log.Panicln("Пока что она всегда nil")
 		}
+		createTemplate.Execute(writer, formData{
+			Ticket: ticket, Errors: []string{},
+		})
+
 	} else if r.Method == http.MethodPost {
 		r.ParseForm()
 		switch r.Form["action"][0] {
 		case "Редактировать":
-			for _, ticket := range tickets {
-				if ticket.Number == uint32(param1) {
-					ticket.Description = r.Form["description"][0]
-					ticket.Title = r.Form["title"][0]
-					ticket.Severity = r.Form["severity"][0]
-					writeTicketsToFiles(tickets)
-				}
+			ticket, err := ticket.Get(param1)
+			if err != nil {
+				log.Panicln("Пока что она всегда nil")
 			}
+			ticket.Description = r.Form["description"][0]
+			ticket.Title = r.Form["title"][0]
+			ticket.Severity = r.Form["severity"][0]
+			_, err = ticket.Update(ticket)
+			if err != nil {
+				log.Panicln("Пока что она всегда nil")
+			}
+			writeTicketsToFiles(entities.TicketList)
 			http.Redirect(writer, r, "/", http.StatusSeeOther)
 		case "Удалить":
-			for i, ticket := range tickets {
-				if ticket.Number == uint32(param1) {
-					tickets = RemoveIndex(tickets, i)
-					writeTicketsToFiles(tickets)
-				}
-			}
+			ticket.Delete(param1)
 			http.Redirect(writer, r, "/", http.StatusSeeOther)
 		}
 	}
@@ -91,6 +76,7 @@ func editHandler(writer http.ResponseWriter, r *http.Request) {
 
 //welcomeHandler создание новой заявки и вывод всех заявок
 func welcomeHandler(writer http.ResponseWriter, r *http.Request) {
+
 	createTemplate, err := template.ParseFiles("./templates/index.html")
 	if err != nil {
 		log.Println("Проблема с загрузкой темплейта", err)
@@ -98,11 +84,11 @@ func welcomeHandler(writer http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		createTemplate.Execute(writer, formData{
-			Ticket: Ticket{}, Errors: []string{}, TicketList: tickets,
+			Ticket: entities.Ticket{}, Errors: []string{}, TicketList: entities.TicketList,
 		})
 	} else if r.Method == http.MethodPost {
 		r.ParseForm()
-		responseData := Ticket{
+		responseData := entities.Ticket{
 			Title:       r.Form["title"][0],
 			Description: r.Form["description"][0],
 			Severity:    r.Form["severity"][0],
@@ -119,16 +105,16 @@ func welcomeHandler(writer http.ResponseWriter, r *http.Request) {
 			errors = append(errors, "Введите описание")
 		}
 		if len(errors) > 0 {
-			createTemplate.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
+			createTemplate.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: entities.TicketList})
 		} else {
-			tickets = append(tickets, responseData)
-			writeTicketsToFiles(tickets)
+			entities.TicketList = append(entities.TicketList, responseData)
+			writeTicketsToFiles(entities.TicketList)
 			http.Redirect(writer, r, "/", http.StatusSeeOther)
 		}
 	}
 }
 
-func writeTicketsToFiles(arr []Ticket) {
+func writeTicketsToFiles(arr []entities.Ticket) {
 	//open counter and write current counter
 	f, err := os.Create("counter")
 	if err != nil {
@@ -163,43 +149,35 @@ func readTicketsFromFiles() {
 	uint64number, err := strconv.ParseUint(strCounter, 10, 32)
 	ticketNumbers = uint32(uint64number)
 	if err != nil {
-		log.Println("Не могу прочитать счетчик", err)
-		panic(err)
+		log.Panicln("Не могу прочитать счетчик", err)
 	} else {
 		log.Println("Считываем счетчик тикетов")
 	}
 	//read all tickets from json
 	jsonFile, err := os.Open("tickets.json")
 	if err != nil {
-		log.Println("Не могу прочитать файл с заявками", err)
-		panic(err)
+		log.Panicln("Не могу прочитать файл с заявками", err)
 	} else {
 		log.Println("Считываем заявки из базы данных")
 	}
 	defer jsonFile.Close()
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	err = json.Unmarshal(byteValue, &tickets)
+	err = json.Unmarshal(byteValue, &entities.TicketList)
 	if err != nil {
-		log.Println("Не могу прочитать тикеты из файлы", err)
-		panic(err)
+		log.Panicln("Не могу записать полученный json в структуру", err)
 	}
 
 }
 
-func main() {
-	cfg, err := config.NewConfig()
-	if err != nil {
-		log.Fatalf("Config error: %s", err)
-	}
+func Run(cfg *config.Config) {
 	readTicketsFromFiles()
 	http.HandleFunc("/", welcomeHandler)
 	http.HandleFunc("/tickets/", editHandler)
 	fs := http.FileServer(http.Dir(cfg.CSS.Path))
 	http.Handle("/css/", http.StripPrefix("/css/", fs))
-
-	err = http.ListenAndServe(cfg.HTTP.Port, nil)
+	fmt.Println(cfg.HTTP.Port)
+	err := http.ListenAndServe(cfg.HTTP.Port, nil)
 	if err != nil {
 		log.Fatal("Problem related to starting HTTP server", err)
 	}
-
 }
