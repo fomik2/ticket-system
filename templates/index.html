@@ -79,7 +79,8 @@
               Наименование: {{ .Title }}</br>
               Описание: {{ .Description }}</br>
               Статус: {{ .Status }}</br>
-              SLA: {{ .SLA}}</br></p><br>
+              Создана: {{ .CreatedAt.Format "02 Jan 2006 15:04" }}</br>
+              SLA: {{ .SLA.Format "02 Jan 2006 15:04" }}</br></p><br>
               {{ end }}</p>
               
             </p></section>

@@ -10,7 +10,7 @@ var (
 
 /*Ticket описывает заявку*/
 type Ticket struct {
-	Title, Description, Status, CreatedAt, Severity string
-	SLA                                             time.Time
-	Number                                          uint32
+	Title, Description, Status, Severity string
+	SLA, CreatedAt                       time.Time
+	Number                               uint32
 }

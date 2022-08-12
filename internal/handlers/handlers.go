@@ -84,12 +84,32 @@ func EditHandler(writer http.ResponseWriter, r *http.Request, config map[string]
 	}
 }
 
+func SLAConfig(severity string) time.Time {
+	curTime := time.Now().Local()
+	var SLATime time.Time
+	switch {
+	case severity == "5":
+		SLATime = curTime.Add(3 * time.Hour)
+	case severity == "4":
+		SLATime = curTime.Add(4 * time.Hour)
+	case severity == "3":
+		SLATime = curTime.Add(5 * time.Hour)
+	case severity == "2":
+		SLATime = curTime.Add(6 * time.Hour)
+	case severity == "1":
+		SLATime = curTime.Add(7 * time.Hour)
+	}
+	return SLATime
+
+}
+
 //welcomeHandler создание новой заявки и вывод всех заявок
 func WelcomeHandler(writer http.ResponseWriter, r *http.Request, config map[string]string) {
+
 	ticket := &repo.Repo{}
 	createTemplate, err := template.ParseFiles(config["index"])
 	if err != nil {
-		log.Println("Проблема с загрузкой темплейта", err)
+		log.Panicln("Проблема с загрузкой темплейта", err)
 	}
 
 	if r.Method == http.MethodGet {
@@ -103,8 +123,8 @@ func WelcomeHandler(writer http.ResponseWriter, r *http.Request, config map[stri
 			Description: r.Form["description"][0],
 			Severity:    r.Form["severity"][0],
 			Status:      "Создана",
-			CreatedAt:   time.Now().Format("02/01/2006 15:04"),
-			SLA:         time.Now(),
+			CreatedAt:   time.Now().Local(),
+			SLA:         SLAConfig(r.Form["severity"][0]),
 			Number:      filerw.TicketNumberPlus(),
 		}
 		errors := []string{}
