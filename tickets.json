@@ -1,14 +1,5 @@
 [
  {
-  "Title": "уке",
-  "Description": "уке",
-  "Status": "Создана",
-  "CreatedAt": "04/08/2022 20:35",
-  "Severity": "5",
-  "SLA": "2022-08-04T20:35:32.142959616Z",
-  "Number": 1001
- },
- {
   "Title": "sdfsfdsdf",
   "Description": "sdfsdf",
   "Status": "Создана",
@@ -16,15 +7,6 @@
   "Severity": "5",
   "SLA": "2022-08-04T20:35:39.481286142Z",
   "Number": 1003
- },
- {
-  "Title": "Сегодняшняя",
-  "Description": "Не работает ничего!",
-  "Status": "Создана",
-  "CreatedAt": "11/08/2022 07:03",
-  "Severity": "5",
-  "SLA": "2022-08-11T07:03:00.499009182Z",
-  "Number": 1015
  },
  {
   "Title": "dfg",
@@ -36,12 +18,12 @@
   "Number": 1017
  },
  {
-  "Title": "wsgfwdfgwgfre",
-  "Description": "wetrgwetrgwhtgrewthgre",
+  "Title": "ergwreg2eg",
+  "Description": "werg2gg55g",
   "Status": "Создана",
-  "CreatedAt": "11/08/2022 12:19",
+  "CreatedAt": "12/08/2022 11:21",
   "Severity": "5",
-  "SLA": "2022-08-11T12:19:47.441744412Z",
-  "Number": 1018
+  "SLA": "2022-08-12T11:21:27.31189818Z",
+  "Number": 1019
  }
 ]

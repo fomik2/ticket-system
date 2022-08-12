@@ -29,6 +29,7 @@ func (t Ticket) List() ([]Ticket, error) {
 }
 
 func (t Ticket) Create(ticket Ticket) (Ticket, error) {
+	TicketList = append(TicketList, ticket)
 	return ticket, nil
 }
 
