@@ -21,7 +21,7 @@ func TicketNumberPlus() uint32 {
 	return ticketNumbers
 }
 
-func WriteTicketsToFiles(arr []entities.Ticket) {
+func WriteTicketsToFiles(arr []entities.Ticket, ticketsFile string) {
 	//open counter and write current counter
 	f, err := os.Create("counter")
 	if err != nil {
@@ -40,14 +40,14 @@ func WriteTicketsToFiles(arr []entities.Ticket) {
 		log.Println("Не могу записать тикеты в файл")
 		panic(err)
 	}
-	_ = ioutil.WriteFile("tickets.json", file, 0644)
+	_ = ioutil.WriteFile(ticketsFile, file, 0644)
 	log.Println("Записываем данные в файлы")
 
 }
 
-func ReadTicketsFromFiles() {
+func ReadTicketsFromFiles(ticketsFile, counterFile string) {
 	//read counter of tickets from file
-	byteCounter, err := os.ReadFile("counter")
+	byteCounter, err := os.ReadFile(counterFile)
 	if err != nil {
 		fmt.Println("Не могу прочитать файл-счетчик")
 		panic(err)
@@ -61,7 +61,7 @@ func ReadTicketsFromFiles() {
 		log.Println("Считываем счетчик тикетов")
 	}
 	//read all tickets from json
-	jsonFile, err := os.Open("tickets.json")
+	jsonFile, err := os.Open(ticketsFile)
 	if err != nil {
 		log.Panicln("Не могу прочитать файл с заявками", err)
 	} else {

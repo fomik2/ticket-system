@@ -21,8 +21,8 @@
     <div class="rt-container">
     	<div class="col-rt-12">
         	<div class="rt-heading">
-            	<h1>Tabs with Indicator Example</h1>
-                <p>Pure CSS tabs with indicator.</p>
+            	<h1>Company's HelpDesk System</h1>
+                <p>Manage tickets and take helpdesk anywhere</p>
             </div>
         </div>
     </div>
@@ -43,13 +43,15 @@
   <ul>
     <li title="Features"><label for="tab1" role="button"><span>Создание новой заявки</span></label></li>
     <li title="Delivery Contents"><label for="tab2" role="button"><span>Список заявок</span></label></li>
-    <li title="Shipping"><label for="tab3" role="button"><span>Shipping</span></label></li>    <li title="Returns"><label for="tab4" role="button"><span>Returns</span></label></li>
   </ul>
   
   <div class="slider"><div class="indicator"></div></div>
   <div class="content">
     <section>
       <h2>Новая заявка</h2><p><div>
+        {{ range .Errors }}
+        <p class="error">{{ . }}</p>
+        {{ end }}
         <form method="POST">
           <label for="title">Название</label>
           <input type="text" id="title" name="title" placeholder="Тема заявки" value={{.Title}}>
@@ -73,7 +75,7 @@
           <h2>Список заявок</h2>
             <p>
               {{range .TicketList}}
-              № заявки: <a href="tickets?id={{.Number}}">{{.Number}}</a></br>
+              № заявки: <a href="tickets/{{.Number}}">{{.Number}}</a></br>
               Наименование: {{ .Title }}</br>
               Описание: {{ .Description }}</br>
               Статус: {{ .Status }}</br>
@@ -81,12 +83,6 @@
               {{ end }}</p>
               
             </p></section>
-        <section>
-          <h2>Shipping</h2>
-          <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Quam nemo ducimus eius, magnam error quisquam sunt voluptate labore, excepturi numquam! Alias libero optio sed harum debitis! Veniam, quia in eum.</p></section>
-    <section>
-          <h2>Returns</h2>
-         <p> Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ipsa dicta vero rerum? Eaque repudiandae architecto libero reprehenderit aliquam magnam ratione quidem? Nobis doloribus molestiae enim deserunt necessitatibus eaque quidem incidunt.</p></section>
   </div>
 </div>
 <!-- End Tabs HTML -->

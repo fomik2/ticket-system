@@ -8,7 +8,9 @@
 <body>
 
 <h3>Редактирование заявки</h3>
-
+{{ range .Errors }}
+<p>{{ . }}</p>
+{{ end }}
 <div>
   <form method="POST">
     <label for="title">Название</label>
