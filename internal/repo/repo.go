@@ -28,7 +28,7 @@ func (t *Repo) Create(ticket entities.Ticket) (entities.Ticket, error) {
 func (t *Repo) Delete(id int) error {
 	for i, ticket := range entities.TicketList {
 		if ticket.Number == uint32(id) {
-			entities.TicketList = RemoveIndex(entities.TicketList, i)
+			entities.TicketList = removeIndex(entities.TicketList, i)
 		}
 	}
 	return nil
@@ -44,7 +44,7 @@ func (t *Repo) Update(ticket entities.Ticket) (entities.Ticket, error) {
 }
 
 //RemoveIndex удаляет из слайса элемент заявки по индексу
-func RemoveIndex(s []entities.Ticket, index int) []entities.Ticket {
+func removeIndex(s []entities.Ticket, index int) []entities.Ticket {
 	if len(s) == 1 {
 		return []entities.Ticket{}
 	}

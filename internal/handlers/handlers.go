@@ -84,6 +84,7 @@ func EditHandler(writer http.ResponseWriter, r *http.Request, config map[string]
 	}
 }
 
+//SLAConfig устанавливает SLA заявки в зависимости от выбранного severity
 func SLAConfig(severity string) time.Time {
 	curTime := time.Now().Local()
 	var SLATime time.Time
