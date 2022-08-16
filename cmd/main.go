@@ -27,16 +27,16 @@ func NewConfig() map[string]string {
 	cfg := &Config{}
 	data, err := os.Open("./config/config.yaml")
 	if err != nil {
-		log.Panicln("Не могу открыть файл конфигурации", err)
+		log.Println("Не могу открыть файл конфигурации", err)
 	}
 	defer data.Close()
 	byteData, err := ioutil.ReadAll(data)
 	if err != nil {
-		log.Panicln("Не могу прочитать файл конфигурации", err)
+		log.Println("Не могу прочитать файл конфигурации", err)
 	}
 	err = yaml.Unmarshal(byteData, &cfg)
 	if err != nil {
-		log.Panicln("Не могу распарсить файл конфигурации", err)
+		log.Println("Не могу распарсить файл конфигурации", err)
 	}
 	config["index"] = cfg.Index
 	config["editor"] = cfg.Editor
