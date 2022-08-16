@@ -41,7 +41,7 @@ func New(config map[string]string) *Handlers {
 }
 
 //getTicketID берет реквест и возвращает ID тикета
-func getTicketID(writer http.ResponseWriter, r *http.Request) int {
+func (h *Handlers) getTicketID(writer http.ResponseWriter, r *http.Request) int {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -56,7 +56,7 @@ func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request,
 	if err != nil {
 		log.Println("Проблема с загрузкой темплейта", err)
 	}
-	id := getTicketID(writer, r)
+	id := h.getTicketID(writer, r)
 	ticket, err := repo.Get(id)
 	if err != nil {
 		log.Println("Не могу выгрузить нужный тикет, проверьте файлы, где они содержаться")
@@ -65,7 +65,7 @@ func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request,
 		Ticket: ticket, Errors: []string{},
 	})
 	if err != nil {
-		log.Panicln("Не могу открыть темплейт", err)
+		log.Println("Не могу открыть темплейт", err)
 	}
 }
 
@@ -74,7 +74,7 @@ func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request, repo
 	r.ParseForm()
 	switch r.Form["action"][0] {
 	case "Редактировать":
-		id := getTicketID(writer, r)
+		id := h.getTicketID(writer, r)
 		currentTicket, err := repo.Get(id)
 		if err != nil {
 			log.Println("Не могу выгрузить нужный тикет, проверьте файлы, где они содержаться", err)
@@ -88,7 +88,7 @@ func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request, repo
 		}
 		http.Redirect(writer, r, "/", http.StatusSeeOther)
 	case "Удалить":
-		id := getTicketID(writer, r)
+		id := h.getTicketID(writer, r)
 		err := repo.Delete(id)
 		if err != nil {
 			log.Println("Программа не смогла удалить тикет, проверьте файлы для записи", err)
@@ -125,7 +125,7 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request, rep
 		}
 		createTemplate.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
 		if err != nil {
-			log.Panicln("Не могу открыть темплейт", err)
+			log.Println("Не могу открыть темплейт", err)
 		}
 	} else {
 		_, err := repo.Create(responseData)
@@ -140,7 +140,7 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request, rep
 func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request, repo Tickets) {
 	createTemplate, err := template.ParseFiles(h.indexTempl)
 	if err != nil {
-		log.Panicln("Проблема с загрузкой темплейта", err)
+		log.Println("Проблема с загрузкой темплейта", err)
 	}
 	tickets, err := repo.List()
 	if err != nil {
@@ -150,6 +150,6 @@ func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request, r
 		Ticket: entities.Ticket{}, Errors: []string{}, TicketList: tickets,
 	})
 	if err != nil {
-		log.Panicln("Не могу открыть темплейт", err)
+		log.Println("Не могу открыть темплейт", err)
 	}
 }

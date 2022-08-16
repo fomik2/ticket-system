@@ -9,6 +9,7 @@ import (
 )
 
 func Run(cfg map[string]string, repo handlers.Tickets) {
+
 	r := mux.NewRouter()
 	handler := handlers.New(cfg)
 
@@ -29,6 +30,7 @@ func Run(cfg map[string]string, repo handlers.Tickets) {
 	}).Methods("GET")
 
 	http.Handle("/", r)
+
 	fs := http.FileServer(http.Dir(cfg["css_path"]))
 	http.Handle("/css/", http.StripPrefix("/css/", fs))
 
