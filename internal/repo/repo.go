@@ -43,27 +43,28 @@ func (t *Repo) SLAConfig(severity string) time.Time {
 
 }
 
-func (t *Repo) writeTicketsToFiles(arr []entities.Ticket) {
+func (t *Repo) writeTicketsToFiles(arr []entities.Ticket) error {
 	//open counter and write current counter
 	f, err := os.Create(t.counterPath)
 	if err != nil {
-		log.Panicln("Не могу открыть файл для записи", err)
+		log.Println("Не могу открыть файл для записи", err)
 	}
 	var s string = strconv.FormatUint(uint64(t.counter+1), 10)
 	_, err = f.WriteString(s)
 	if err != nil {
-		log.Panicln("Не могу записать номера заявок в файл", err)
+		log.Println("Не могу записать номера заявок в файл", err)
 	}
 	//open json and parse tickets
 	file, err := json.MarshalIndent(arr, "", " ")
 	if err != nil {
-		log.Panicln("Ошибка при записи json в файл", err)
+		log.Println("Ошибка при записи json в файл", err)
 	}
 	err = ioutil.WriteFile(t.ticketsPath, file, 0644)
 	if err != nil {
-		log.Panicln("Не могу записать тикеты в файл", err)
+		log.Println("Не могу записать тикеты в файл", err)
 	}
 	log.Println("Записываем данные в файлы")
+	return err
 }
 
 func (t *Repo) readTicketsFromFiles() []entities.Ticket {
@@ -120,7 +121,10 @@ func (t *Repo) Create(ticket entities.Ticket) (entities.Ticket, error) {
 	ticket.Number = t.counter + 1
 	ticket.SLA = t.SLAConfig(ticket.Severity)
 	ticketList = append(ticketList, ticket)
-	t.writeTicketsToFiles(ticketList)
+	err := t.writeTicketsToFiles(ticketList)
+	if err != nil {
+		log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
+	}
 	return ticket, nil
 }
 
@@ -130,7 +134,10 @@ func (t *Repo) Delete(id int) error {
 		if ticket.Number == uint32(id) {
 			ticketList = removeIndex(ticketList, i)
 		}
-		t.writeTicketsToFiles(ticketList)
+		err := t.writeTicketsToFiles(ticketList)
+		if err != nil {
+			log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
+		}
 	}
 	return nil
 }
@@ -140,7 +147,10 @@ func (t *Repo) Update(ticket entities.Ticket) (entities.Ticket, error) {
 	for i, elem := range ticketList {
 		if elem.Number == uint32(ticket.Number) {
 			ticketList[i] = elem
-			t.writeTicketsToFiles(ticketList)
+			err := t.writeTicketsToFiles(ticketList)
+			if err != nil {
+				log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
+			}
 			return elem, nil
 		}
 	}
