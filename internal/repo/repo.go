@@ -151,10 +151,10 @@ func (t *Repo) Delete(id int) error {
 		if ticket.Number == uint32(id) {
 			ticketList = removeIndex(ticketList, i)
 		}
-		err = t.writeTicketsToFiles(ticketList)
-		if err != nil {
-			log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
-		}
+	}
+	err = t.writeTicketsToFiles(ticketList)
+	if err != nil {
+		log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
 	}
 	return err
 }
