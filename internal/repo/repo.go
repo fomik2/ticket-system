@@ -67,42 +67,46 @@ func (t *Repo) writeTicketsToFiles(arr []entities.Ticket) error {
 	return err
 }
 
-func (t *Repo) readTicketsFromFiles() []entities.Ticket {
+func (t *Repo) readTicketsFromFiles() ([]entities.Ticket, error) {
 	ticketList := []entities.Ticket{}
 	//read counter of tickets from file
 	byteCounter, err := os.ReadFile(t.counterPath)
 	if err != nil {
-		log.Panicln("Не могу прочитать файл-счетчик", err)
+		log.Println("Не могу прочитать файл-счетчик", err)
 	}
 	strCounter := string(byteCounter)
 	uint64number, err := strconv.ParseUint(strCounter, 10, 32)
 	t.counter = uint32(uint64number)
 	if err != nil {
-		log.Panicln("Не могу прочитать счетчик", err)
+		log.Println("Не могу прочитать счетчик", err)
 	} else {
 		log.Println("Считываем счетчик тикетов")
 	}
 	//read all tickets from json
 	jsonFile, err := os.Open(t.ticketsPath)
 	if err != nil {
-		log.Panicln("Не могу открыть файл с заявками", err)
+		log.Println("Не могу открыть файл с заявками", err)
 	} else {
 		log.Println("Считываем заявки из базы данных")
 	}
 	defer jsonFile.Close()
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		log.Panicln("Не могу прочитать файл с заявками", err)
+		log.Println("Не могу прочитать файл с заявками", err)
 	}
 	err = json.Unmarshal(byteValue, &ticketList)
 	if err != nil {
-		log.Panicln("Не могу записать полученный json в структуру", err)
+		log.Println("Не могу записать полученный json в структуру", err)
 	}
-	return ticketList
+	return ticketList, err
 }
 
 func (t *Repo) Get(id int) (entities.Ticket, error) {
-	ticketList := t.readTicketsFromFiles()
+	ticketList, err := t.readTicketsFromFiles()
+	if err != nil {
+		log.Println("Не могу прочитать нужный тикет из файла", err)
+		return entities.Ticket{}, err
+	}
 	for _, ticket := range ticketList {
 		if ticket.Number == uint32(id) {
 			return ticket, nil
@@ -112,46 +116,64 @@ func (t *Repo) Get(id int) (entities.Ticket, error) {
 }
 
 func (t *Repo) List() ([]entities.Ticket, error) {
-	ticketList := t.readTicketsFromFiles()
+	ticketList, err := t.readTicketsFromFiles()
+	if err != nil {
+		log.Println("Не могу прочитать текущую базу данных тикетов", err)
+		return []entities.Ticket{}, err
+	}
 	return ticketList, nil
 }
 
 func (t *Repo) Create(ticket entities.Ticket) (entities.Ticket, error) {
-	ticketList := t.readTicketsFromFiles()
+	ticketList, err := t.readTicketsFromFiles()
+	if err != nil {
+		log.Println("Не могу прочитать текущую базу данных тикетов", err)
+		return entities.Ticket{}, err
+	}
 	ticket.Number = t.counter + 1
 	ticket.SLA = t.SLAConfig(ticket.Severity)
 	ticketList = append(ticketList, ticket)
-	err := t.writeTicketsToFiles(ticketList)
+	err = t.writeTicketsToFiles(ticketList)
 	if err != nil {
 		log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
+		return ticket, err
 	}
 	return ticket, nil
 }
 
 func (t *Repo) Delete(id int) error {
-	ticketList := t.readTicketsFromFiles()
+	ticketList, err := t.readTicketsFromFiles()
+	if err != nil {
+		log.Println("Не могу прочитать текущую базу данных тикетов", err)
+		return err
+	}
 	for i, ticket := range ticketList {
 		if ticket.Number == uint32(id) {
 			ticketList = removeIndex(ticketList, i)
 		}
-		err := t.writeTicketsToFiles(ticketList)
+		err = t.writeTicketsToFiles(ticketList)
 		if err != nil {
 			log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
 		}
 	}
-	return nil
+	return err
 }
 
 func (t *Repo) Update(ticket entities.Ticket) (entities.Ticket, error) {
-	ticketList := t.readTicketsFromFiles()
+	ticketList, err := t.readTicketsFromFiles()
+	if err != nil {
+		log.Println("Не могу прочитать текущую базу данных тикетов", err)
+		return entities.Ticket{}, err
+	}
 	for i, elem := range ticketList {
 		if elem.Number == uint32(ticket.Number) {
-			ticketList[i] = elem
+			ticketList[i] = ticket
 			err := t.writeTicketsToFiles(ticketList)
 			if err != nil {
 				log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
+				return ticket, err
 			}
-			return elem, nil
+			return ticket, nil
 		}
 	}
 	return entities.Ticket{}, nil
