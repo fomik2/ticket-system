@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/fomik2/ticket-system/internal/app"
+	rep "github.com/fomik2/ticket-system/internal/repo"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,6 +22,7 @@ type (
 )
 
 func NewConfig() map[string]string {
+
 	config := make(map[string]string)
 	cfg := &Config{}
 	data, err := os.Open("./config/config.yaml")
@@ -47,5 +49,6 @@ func NewConfig() map[string]string {
 
 func main() {
 	cfg := NewConfig()
-	app.Run(cfg)
+	repo := rep.New(cfg)
+	app.Run(cfg, repo)
 }
