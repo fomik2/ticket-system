@@ -2,6 +2,7 @@ package repo
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,15 +17,15 @@ type Repo struct {
 	counter                  uint32
 }
 
-func New(config map[string]string) *Repo {
+func New(tickets, counter string) *Repo {
 	t := Repo{}
-	t.counterPath = config["counter"]
-	t.ticketsPath = config["tickets"]
+	t.counterPath = counter
+	t.ticketsPath = tickets
 	return &t
 }
 
 //SLAConfig устанавливает SLA заявки в зависимости от выбранного severity
-func (t *Repo) SLAConfig(severity string) time.Time {
+func SLAConfig(severity string) time.Time {
 	curTime := time.Now().Local()
 	var SLATime time.Time
 	switch {
@@ -47,23 +48,23 @@ func (t *Repo) writeTicketsToFiles(arr []entities.Ticket) error {
 	//open counter and write current counter
 	f, err := os.Create(t.counterPath)
 	if err != nil {
-		log.Println("Не могу открыть файл для записи", err)
+		return fmt.Errorf("can't open file for writing %w", err)
 	}
 	var s string = strconv.FormatUint(uint64(t.counter+1), 10)
 	_, err = f.WriteString(s)
 	if err != nil {
-		log.Println("Не могу записать номера заявок в файл", err)
+		return fmt.Errorf("can't write data to file %w", err)
 	}
 	//open json and parse tickets
 	file, err := json.MarshalIndent(arr, "", " ")
 	if err != nil {
-		log.Println("Ошибка при записи json в файл", err)
+		return fmt.Errorf("something wrong with json marshal. %w", err)
 	}
 	err = ioutil.WriteFile(t.ticketsPath, file, 0644)
 	if err != nil {
-		log.Println("Не могу записать тикеты в файл", err)
+		return fmt.Errorf("can't write data to file %w", err)
 	}
-	log.Println("Записываем данные в файлы")
+	log.Println("Writing data to file...")
 	return err
 }
 
@@ -72,31 +73,31 @@ func (t *Repo) readTicketsFromFiles() ([]entities.Ticket, error) {
 	//read counter of tickets from file
 	byteCounter, err := os.ReadFile(t.counterPath)
 	if err != nil {
-		log.Println("Не могу прочитать файл-счетчик", err)
+		return []entities.Ticket{}, fmt.Errorf("can't read file %w", err)
 	}
 	strCounter := string(byteCounter)
 	uint64number, err := strconv.ParseUint(strCounter, 10, 32)
 	t.counter = uint32(uint64number)
 	if err != nil {
-		log.Println("Не могу прочитать счетчик", err)
+		return []entities.Ticket{}, fmt.Errorf("can't read counter from file %w", err)
 	} else {
-		log.Println("Считываем счетчик тикетов")
+		log.Println("Read counter...")
 	}
 	//read all tickets from json
 	jsonFile, err := os.Open(t.ticketsPath)
 	if err != nil {
-		log.Println("Не могу открыть файл с заявками", err)
+		return []entities.Ticket{}, fmt.Errorf("can't open ticket file. %w", err)
 	} else {
-		log.Println("Считываем заявки из базы данных")
+		log.Println("Read JSON file with tickets...")
 	}
 	defer jsonFile.Close()
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		log.Println("Не могу прочитать файл с заявками", err)
+		return []entities.Ticket{}, fmt.Errorf("can't read json. %w", err)
 	}
 	err = json.Unmarshal(byteValue, &ticketList)
 	if err != nil {
-		log.Println("Не могу записать полученный json в структуру", err)
+		return []entities.Ticket{}, fmt.Errorf("can't unmarshal json. %w", err)
 	}
 	return ticketList, err
 }
@@ -104,7 +105,6 @@ func (t *Repo) readTicketsFromFiles() ([]entities.Ticket, error) {
 func (t *Repo) Get(id int) (entities.Ticket, error) {
 	ticketList, err := t.readTicketsFromFiles()
 	if err != nil {
-		log.Println("Не могу прочитать нужный тикет из файла", err)
 		return entities.Ticket{}, err
 	}
 	for _, ticket := range ticketList {
@@ -118,7 +118,6 @@ func (t *Repo) Get(id int) (entities.Ticket, error) {
 func (t *Repo) List() ([]entities.Ticket, error) {
 	ticketList, err := t.readTicketsFromFiles()
 	if err != nil {
-		log.Println("Не могу прочитать текущую базу данных тикетов", err)
 		return []entities.Ticket{}, err
 	}
 	return ticketList, nil
@@ -127,15 +126,13 @@ func (t *Repo) List() ([]entities.Ticket, error) {
 func (t *Repo) Create(ticket entities.Ticket) (entities.Ticket, error) {
 	ticketList, err := t.readTicketsFromFiles()
 	if err != nil {
-		log.Println("Не могу прочитать текущую базу данных тикетов", err)
 		return entities.Ticket{}, err
 	}
 	ticket.Number = t.counter + 1
-	ticket.SLA = t.SLAConfig(ticket.Severity)
+	ticket.SLA = SLAConfig(ticket.Severity)
 	ticketList = append(ticketList, ticket)
 	err = t.writeTicketsToFiles(ticketList)
 	if err != nil {
-		log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
 		return ticket, err
 	}
 	return ticket, nil
@@ -144,7 +141,6 @@ func (t *Repo) Create(ticket entities.Ticket) (entities.Ticket, error) {
 func (t *Repo) Delete(id int) error {
 	ticketList, err := t.readTicketsFromFiles()
 	if err != nil {
-		log.Println("Не могу прочитать текущую базу данных тикетов", err)
 		return err
 	}
 	for i, ticket := range ticketList {
@@ -154,7 +150,7 @@ func (t *Repo) Delete(id int) error {
 	}
 	err = t.writeTicketsToFiles(ticketList)
 	if err != nil {
-		log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
+		return err
 	}
 	return err
 }
@@ -162,7 +158,6 @@ func (t *Repo) Delete(id int) error {
 func (t *Repo) Update(ticket entities.Ticket) (entities.Ticket, error) {
 	ticketList, err := t.readTicketsFromFiles()
 	if err != nil {
-		log.Println("Не могу прочитать текущую базу данных тикетов", err)
 		return entities.Ticket{}, err
 	}
 	for i, elem := range ticketList {
@@ -170,7 +165,6 @@ func (t *Repo) Update(ticket entities.Ticket) (entities.Ticket, error) {
 			ticketList[i] = ticket
 			err := t.writeTicketsToFiles(ticketList)
 			if err != nil {
-				log.Println("Программа не смогла записать данные, проверьте, существуют ли файлы")
 				return ticket, err
 			}
 			return ticket, nil

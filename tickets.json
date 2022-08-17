@@ -1,14 +1,5 @@
 [
  {
-  "Title": "dfgdfgg",
-  "Description": "dfgdfgfg",
-  "Status": "Создана",
-  "Severity": "5",
-  "SLA": "2022-08-16T17:43:02.454414751Z",
-  "CreatedAt": "2022-08-16T14:43:02.45419552Z",
-  "Number": 1116
- },
- {
   "Title": "dfg",
   "Description": "dfg",
   "Status": "Создана",
@@ -34,5 +25,14 @@
   "SLA": "2022-08-16T21:52:37.41853813Z",
   "CreatedAt": "2022-08-16T18:52:37.418419228Z",
   "Number": 1123
+ },
+ {
+  "Title": "trt",
+  "Description": "ertetr",
+  "Status": "Создана",
+  "Severity": "5",
+  "SLA": "2022-08-17T21:11:17.426382406Z",
+  "CreatedAt": "2022-08-17T18:11:17.426262696Z",
+  "Number": 1125
  }
 ]

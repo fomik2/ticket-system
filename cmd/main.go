@@ -21,9 +21,8 @@ type (
 	}
 )
 
-func NewConfig() map[string]string {
+func NewConfig() (index, editor, tickets, counter, http_port, css_path string) {
 
-	config := make(map[string]string)
 	cfg := &Config{}
 	data, err := os.Open("./config/config.yaml")
 	if err != nil {
@@ -38,17 +37,17 @@ func NewConfig() map[string]string {
 	if err != nil {
 		log.Println("Не могу распарсить файл конфигурации", err)
 	}
-	config["index"] = cfg.Index
-	config["editor"] = cfg.Editor
-	config["tickets"] = cfg.Tickets
-	config["counter"] = cfg.Counter
-	config["http_port"] = cfg.HTTP_port
-	config["css_path"] = cfg.CSS_path
-	return config
+	index = cfg.Index
+	editor = cfg.Editor
+	tickets = cfg.Tickets
+	counter = cfg.Counter
+	http_port = cfg.HTTP_port
+	css_path = cfg.CSS_path
+	return
 }
 
 func main() {
-	cfg := NewConfig()
-	repo := rep.New(cfg)
-	app.Run(cfg, repo)
+	index, editor, tickets, counter, http_port, css_path := NewConfig()
+	repo := rep.New(tickets, counter)
+	app.Run(index, editor, tickets, counter, http_port, css_path, repo)
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -28,81 +29,103 @@ type formData struct {
 }
 
 type Handlers struct {
-	indexTempl, editorTempl, ticketsPath, counterPath string
+	repo            Tickets
+	editorTemplPath string
+	ticketsPath     string
+	counterPath     string
+	Templ           *template.Template
 }
 
-func New(config map[string]string) *Handlers {
+func New(index, editor, tickets, counter string, repo Tickets) *Handlers {
 	newHandler := Handlers{}
-	newHandler.indexTempl = config["index"]
-	newHandler.editorTempl = config["editor"]
-	newHandler.ticketsPath = config["tickets"]
-	newHandler.counterPath = config["counter"]
+	newHandler.repo = repo
+	newHandler.editorTemplPath = editor
+	newHandler.ticketsPath = tickets
+	newHandler.counterPath = counter
+	newHandler.Templ = createTemplates(index, editor)
 	return &newHandler
 }
 
 //getTicketID берет реквест и возвращает ID тикета
-func (h *Handlers) getTicketID(writer http.ResponseWriter, r *http.Request) int {
+func getTicketID(writer http.ResponseWriter, r *http.Request) (int, error) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		log.Println("Не могу распарсить ID тикета", err)
+		return id, fmt.Errorf("can't parse id.  %w", err)
 	}
-	return id
+	return id, nil
+}
+
+func createTemplates(indexPath, editorPath string) (indexTempl *template.Template) {
+	indexTempl, err := template.ParseFiles(indexPath, editorPath)
+	if err != nil {
+		log.Println(err)
+	}
+	return
 }
 
 //GetTicketForEdit выбрать заявку для редактирования и показать её
-func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request, repo Tickets) {
-	createTemplate, err := template.ParseFiles(h.editorTempl)
+func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request) {
+	id, err := getTicketID(writer, r)
 	if err != nil {
-		log.Println("Проблема с загрузкой темплейта", err)
+		log.Println(err)
+		writer.Write([]byte("Internal server Error"))
 	}
-	id := h.getTicketID(writer, r)
-	ticket, err := repo.Get(id)
+	ticket, err := h.repo.Get(id)
 	if err != nil {
-		log.Println("Не могу выгрузить нужный тикет, проверьте файлы, где они содержаться")
+		log.Println(err)
+		writer.Write([]byte("Internal server Error"))
 	}
-	createTemplate.Execute(writer, formData{
+	h.Templ.Execute(writer, formData{
 		Ticket: ticket, Errors: []string{},
 	})
 	if err != nil {
-		log.Println("Не могу открыть темплейт", err)
+		log.Println("can't execute template", err)
 	}
 }
 
 //EditHandler редактирование заявки
-func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request, repo Tickets) {
+func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	switch r.Form["action"][0] {
 	case "Редактировать":
-		id := h.getTicketID(writer, r)
-		currentTicket, err := repo.Get(id)
+		id, err := getTicketID(writer, r)
 		if err != nil {
-			log.Println("Не могу выгрузить нужный тикет, проверьте файлы, где они содержаться", err)
+			log.Println(err)
+			writer.Write([]byte("Internal server Error"))
+		}
+		currentTicket, err := h.repo.Get(id)
+		if err != nil {
+			log.Println(err)
+			writer.Write([]byte("Internal server error"))
 		}
 		currentTicket.Description = r.Form["description"][0]
 		currentTicket.Title = r.Form["title"][0]
 		currentTicket.Severity = r.Form["severity"][0]
-		_, err = repo.Update(currentTicket)
+		_, err = h.repo.Update(currentTicket)
 		if err != nil {
-			log.Println("Программа не смогла обновить информацию, проверьте файлы базы тикетов", err)
+			log.Println("can't update ticket", err)
+			writer.Write([]byte("Internal server error"))
 		}
 		http.Redirect(writer, r, "/", http.StatusSeeOther)
 	case "Удалить":
-		id := h.getTicketID(writer, r)
-		err := repo.Delete(id)
+		id, err := getTicketID(writer, r)
 		if err != nil {
-			log.Println("Программа не смогла удалить тикет, проверьте файлы для записи", err)
+			log.Println(err)
+			writer.Write([]byte("Internal server Error"))
+		}
+		err = h.repo.Delete(id)
+		if err != nil {
+			log.Println(err)
+			writer.Write([]byte("Internal server Error"))
+			return
 		}
 		http.Redirect(writer, r, "/", http.StatusSeeOther)
 	}
 }
 
 //CreateTicket создание новой заявки
-func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request, repo Tickets) {
-	createTemplate, err := template.ParseFiles(h.indexTempl)
-	if err != nil {
-		log.Println("Проблема с загрузкой темплейта", err)
-	}
+func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	responseData := entities.Ticket{
 		Title:       r.Form["title"][0],
@@ -119,37 +142,39 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request, rep
 		errors = append(errors, "Введите описание")
 	}
 	if len(errors) > 0 {
-		tickets, err := repo.List()
+		tickets, err := h.repo.List()
 		if err != nil {
-			log.Println("Не могу выгрузить список тикетов, проверьте файлы, где они содержаться", err)
+			log.Println("can't load tickets, check data files", err)
+			writer.Write([]byte("Internal server error"))
 		}
-		createTemplate.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
+		h.Templ.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
 		if err != nil {
-			log.Println("Не могу открыть темплейт", err)
+			log.Println(err)
+			writer.Write([]byte("Internal server error, can't load template"))
 		}
 	} else {
-		_, err := repo.Create(responseData)
+		_, err := h.repo.Create(responseData)
 		if err != nil {
-			log.Println("Программа не смогла создать тикет, проверьте файлы для записи", err)
+			log.Println(err)
+			writer.Write([]byte("Internal server error"))
 		}
 		http.Redirect(writer, r, "/", http.StatusSeeOther)
 	}
 }
 
 //welcomeHandler отображение формы и списка всех заявок
-func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request, repo Tickets) {
-	createTemplate, err := template.ParseFiles(h.indexTempl)
+func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request) {
+	tickets, err := h.repo.List()
 	if err != nil {
-		log.Println("Проблема с загрузкой темплейта", err)
+		log.Println(err)
+		writer.Write([]byte("Internal server error"))
+	} else {
+		h.Templ.Execute(writer, formData{
+			Ticket: entities.Ticket{}, Errors: []string{}, TicketList: tickets,
+		})
 	}
-	tickets, err := repo.List()
 	if err != nil {
-		log.Println("Не могу выгрузить список тикетов, проверьте файлы, где они содержаться", err)
-	}
-	createTemplate.Execute(writer, formData{
-		Ticket: entities.Ticket{}, Errors: []string{}, TicketList: tickets,
-	})
-	if err != nil {
-		log.Println("Не могу открыть темплейт", err)
+		log.Println("can't open template file", err)
+		writer.Write([]byte("Internal server error"))
 	}
 }
