@@ -37,12 +37,16 @@ type Handlers struct {
 }
 
 func New(index, editor, tickets, counter string, repo Tickets) *Handlers {
+	var err error
 	newHandler := Handlers{}
 	newHandler.repo = repo
 	newHandler.editorTemplPath = editor
 	newHandler.ticketsPath = tickets
 	newHandler.counterPath = counter
-	newHandler.Templ = createTemplates(index, editor)
+	newHandler.Templ, err = createTemplates(index, editor)
+	if err != nil {
+		log.Println(err)
+	}
 	return &newHandler
 }
 
@@ -56,12 +60,12 @@ func getTicketID(writer http.ResponseWriter, r *http.Request) (int, error) {
 	return id, nil
 }
 
-func createTemplates(indexPath, editorPath string) (indexTempl *template.Template) {
-	indexTempl, err := template.ParseFiles(indexPath, editorPath)
+func createTemplates(indexPath, editorPath string) (indexTempl *template.Template, err error) {
+	indexTempl, err = template.ParseFiles(indexPath, editorPath)
 	if err != nil {
-		log.Println(err)
+		return nil, fmt.Errorf("can't parse id.  %w", err)
 	}
-	return
+	return indexTempl, nil
 }
 
 //GetTicketForEdit выбрать заявку для редактирования и показать её
