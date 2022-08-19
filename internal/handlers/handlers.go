@@ -36,7 +36,7 @@ type Handlers struct {
 	Templ           *template.Template
 }
 
-func New(index, editor, tickets, counter string, repo Tickets) *Handlers {
+func New(index, editor, tickets, counter string, repo Tickets) (*Handlers, error) {
 	var err error
 	newHandler := Handlers{}
 	newHandler.repo = repo
@@ -45,9 +45,9 @@ func New(index, editor, tickets, counter string, repo Tickets) *Handlers {
 	newHandler.counterPath = counter
 	newHandler.Templ, err = createTemplates(index, editor)
 	if err != nil {
-		log.Println(err)
+		return &Handlers{}, fmt.Errorf("error when try to parse templates %w", err)
 	}
-	return &newHandler
+	return &newHandler, nil
 }
 
 //getTicketID берет реквест и возвращает ID тикета
