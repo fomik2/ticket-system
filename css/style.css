@@ -192,3 +192,9 @@
     white-space: initial;
  }
 }
+
+.error {
+  color: red;
+  font-weight: bold;
+
+}

@@ -1,14 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width" />
-<title>Система заявок</title>
-<link rel="stylesheet"  type="text/css" href="../css/form-style.css">
-</head>
-<body>
 
+{{ define "body" }}
 <h3>Редактирование заявки</h3>
-
+{{ range .Errors }}
+<p>{{ . }}</p>
+{{ end }}
 <div>
   <form method="POST">
     <label for="title">Название</label>
@@ -25,12 +20,10 @@
       <option value="2">2</option>
       <option value="1">1</option>
     </select>
-  
     <input type="submit" name="action" value="Редактировать">
-    <input type="submit" name="action" value="Удалить">
-
   </form>
+    <form method="post" action="/tickets/{{ .Number}}/delete/"><input type="submit" name="action"  value="Удалить"></form>
+    
+  
 </div>
-
-</body>
-</html>
+{{ end }}
