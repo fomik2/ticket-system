@@ -43,7 +43,7 @@ func New(index, editor, tickets, counter string, repo Tickets) (*Handlers, error
 	newHandler.editorTemplPath = editor
 	newHandler.ticketsPath = tickets
 	newHandler.counterPath = counter
-	newHandler.Templ, err = createTemplates(index, editor)
+	newHandler.Templ, err = parseTemplates(index, editor)
 	if err != nil {
 		return &Handlers{}, fmt.Errorf("error when try to parse templates %w", err)
 	}
@@ -60,7 +60,7 @@ func getTicketID(writer http.ResponseWriter, r *http.Request) (int, error) {
 	return id, nil
 }
 
-func createTemplates(indexPath, editorPath string) (indexTempl *template.Template, err error) {
+func parseTemplates(indexPath, editorPath string) (indexTempl *template.Template, err error) {
 	indexTempl, err = template.ParseFiles(indexPath, editorPath)
 	if err != nil {
 		return nil, fmt.Errorf("can't parse id.  %w", err)
