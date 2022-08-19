@@ -1,23 +1,5 @@
 [
  {
-  "Title": "fdgfg",
-  "Description": "dfggf",
-  "Status": "Создана",
-  "Severity": "5",
-  "SLA": "2022-08-19T13:06:37.007705366Z",
-  "CreatedAt": "2022-08-19T10:06:37.007605331Z",
-  "Number": 1224
- },
- {
-  "Title": "dgrdg",
-  "Description": "dfgdfg",
-  "Status": "Создана",
-  "Severity": "5",
-  "SLA": "2022-08-19T13:09:18.745778873Z",
-  "CreatedAt": "2022-08-19T10:09:18.745666823Z",
-  "Number": 1228
- },
- {
   "Title": "sfddsf",
   "Description": "sdfdfs",
   "Status": "Создана",

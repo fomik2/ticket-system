@@ -73,6 +73,8 @@ func parseTemplates(indexPath, editorPath string) (indexTempl, editorTempl *temp
 
 //GetTicketForEdit выбрать заявку для редактирования и показать её
 func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request) {
+	log.Println("GetTicketForEdit Handler in action....", r.Method)
+
 	id, err := getTicketID(writer, r)
 	if err != nil {
 		log.Println(err)
@@ -96,6 +98,7 @@ func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request)
 
 //EditHandler редактирование заявки
 func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
+	log.Println("Edit Handler in action....", r.Method)
 	r.ParseForm()
 	id, err := getTicketID(writer, r)
 	if err != nil {
@@ -122,7 +125,7 @@ func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
-	log.Println("sdfesfkhbgsjhfhjkbfew")
+	log.Println("DeleteHandler in action....", r.Method)
 	id, err := getTicketID(writer, r)
 	if err != nil {
 		log.Println(err)
@@ -140,6 +143,7 @@ func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
 
 //CreateTicket создание новой заявки
 func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
+	log.Println("CreateTicket handler in action....", r.Method)
 	r.ParseForm()
 	responseData := entities.Ticket{
 		Title:       r.Form["title"][0],
@@ -181,6 +185,7 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 
 //welcomeHandler отображение формы и списка всех заявок
 func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request) {
+	log.Println("Welcome handler in action....", r.Method)
 	tickets, err := h.repo.List()
 	if err != nil {
 		log.Println(err)

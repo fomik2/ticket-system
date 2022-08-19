@@ -29,9 +29,10 @@
       <option value="1">1</option>
     </select>
     <input type="submit" name="action" value="Редактировать">
-    <form method="POST" action="{{ .Number }}/delete/"><a href="{{ .Number }}/delete/">dsfsefdsf</a><input type="submit" name="action"  value="Удалить"></form>
-    
   </form>
+    <form method="post" action="/tickets/{{ .Number}}/delete/"><input type="submit" name="action"  value="Удалить"></form>
+    
+  
 </div>
 
 </body>
