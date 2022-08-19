@@ -77,58 +77,64 @@ func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server Error"))
+		return
 	}
 	ticket, err := h.repo.Get(id)
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server Error"))
+		return
 	}
 	h.editorTempl.Execute(writer, formData{
 		Ticket: ticket, Errors: []string{},
 	})
 	if err != nil {
 		log.Println("can't execute template", err)
+		return
 	}
 }
 
 //EditHandler редактирование заявки
 func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	switch r.Form["action"][0] {
-	case "Редактировать":
-		id, err := getTicketID(writer, r)
-		if err != nil {
-			log.Println(err)
-			writer.Write([]byte("Internal server Error"))
-		}
-		currentTicket, err := h.repo.Get(id)
-		if err != nil {
-			log.Println(err)
-			writer.Write([]byte("Internal server error"))
-		}
-		currentTicket.Description = r.Form["description"][0]
-		currentTicket.Title = r.Form["title"][0]
-		currentTicket.Severity = r.Form["severity"][0]
-		_, err = h.repo.Update(currentTicket)
-		if err != nil {
-			log.Println("can't update ticket", err)
-			writer.Write([]byte("Internal server error"))
-		}
-		http.Redirect(writer, r, "/", http.StatusSeeOther)
-	case "Удалить":
-		id, err := getTicketID(writer, r)
-		if err != nil {
-			log.Println(err)
-			writer.Write([]byte("Internal server Error"))
-		}
-		err = h.repo.Delete(id)
-		if err != nil {
-			log.Println(err)
-			writer.Write([]byte("Internal server Error"))
-			return
-		}
-		http.Redirect(writer, r, "/", http.StatusSeeOther)
+	id, err := getTicketID(writer, r)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server Error"))
+		return
 	}
+	currentTicket, err := h.repo.Get(id)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server error"))
+		return
+	}
+	currentTicket.Description = r.Form["description"][0]
+	currentTicket.Title = r.Form["title"][0]
+	currentTicket.Severity = r.Form["severity"][0]
+	_, err = h.repo.Update(currentTicket)
+	if err != nil {
+		log.Println("can't update ticket", err)
+		writer.Write([]byte("Internal server error"))
+		return
+	}
+	http.Redirect(writer, r, "/", http.StatusSeeOther)
+}
+
+func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
+	id, err := getTicketID(writer, r)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server Error"))
+		return
+	}
+	err = h.repo.Delete(id)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server Error"))
+		return
+	}
+	http.Redirect(writer, r, "/", http.StatusSeeOther)
 }
 
 //CreateTicket создание новой заявки
@@ -153,17 +159,20 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println("can't load tickets, check data files", err)
 			writer.Write([]byte("Internal server error"))
+			return
 		}
 		h.indexTempl.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
 		if err != nil {
 			log.Println(err)
 			writer.Write([]byte("Internal server error, can't load template"))
+			return
 		}
 	} else {
 		_, err := h.repo.Create(responseData)
 		if err != nil {
 			log.Println(err)
 			writer.Write([]byte("Internal server error"))
+			return
 		}
 		http.Redirect(writer, r, "/", http.StatusSeeOther)
 	}
@@ -183,5 +192,6 @@ func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("can't open template file", err)
 		writer.Write([]byte("Internal server error"))
+		return
 	}
 }
