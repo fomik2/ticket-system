@@ -1,53 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"> 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Tabs with Indicator Example</title>
-
-    <meta name="author" content="Codeconvey" />
-    
-    <link rel="stylesheet" href="../css/style.css">
-    <!--Only for demo purpose - no need to add.-->
-    <link rel="stylesheet" href="../css/demo.css" />
-    <link rel="stylesheet" href="../css/form-style.css" />
-
-	
-</head>
-<body>
-		
-<header class="ScriptHeader">
-    <div class="rt-container">
-    	<div class="col-rt-12">
-        	<div class="rt-heading">
-            	<h1>Company's HelpDesk System</h1>
-                <p>Manage tickets and take helpdesk anywhere</p>
-            </div>
-        </div>
-    </div>
-</header>
-
-<section>
-    <div class="rt-container">
-          <div class="col-rt-12">
-              <div class="Scriptcontent">
-              
-            <!-- Start Tabs HTML -->
-    		<div class="tabs">
-  
-  <input type="radio" id="tab1" name="tab-control" checked>
-  <input type="radio" id="tab2" name="tab-control">
-  <input type="radio" id="tab3" name="tab-control">  
-  <input type="radio" id="tab4" name="tab-control">
-  <ul>
-    <li title="Features"><label for="tab1" role="button"><span>Создание новой заявки</span></label></li>
-    <li title="Delivery Contents"><label for="tab2" role="button"><span>Список заявок</span></label></li>
-  </ul>
-  
-  <div class="slider"><div class="indicator"></div></div>
-  <div class="content">
-    <section>
+  {{ define "body" }}
+  <section>
       <h2>Новая заявка</h2><p><div>
         {{ range .Errors }}
         <p class="error">{{ . }}</p>
@@ -91,6 +43,4 @@
 		</div>
     </div>
 </section>
-    <!-- Analytics -->
-	</body>
-</html>
+{{ end }}

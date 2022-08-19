@@ -14,6 +14,7 @@ type (
 	Config struct {
 		HTTP_port string `yaml:"http_port"`
 		Index     string `yaml:"templ_index"`
+		Layout    string `yaml:"templ_layout"`
 		Editor    string `yaml:"templ_editor"`
 		Tickets   string `yaml:"tickets"`
 		Counter   string `yaml:"counter"`
@@ -21,7 +22,7 @@ type (
 	}
 )
 
-func NewConfig() (index, editor, tickets, counter, http_port, css_path string) {
+func NewConfig() (index, layout, editor, tickets, counter, http_port, css_path string) {
 
 	cfg := &Config{}
 	data, err := os.Open("./config/config.yaml")
@@ -39,6 +40,7 @@ func NewConfig() (index, editor, tickets, counter, http_port, css_path string) {
 	}
 	index = cfg.Index
 	editor = cfg.Editor
+	layout = cfg.Layout
 	tickets = cfg.Tickets
 	counter = cfg.Counter
 	http_port = cfg.HTTP_port
@@ -47,9 +49,9 @@ func NewConfig() (index, editor, tickets, counter, http_port, css_path string) {
 }
 
 func main() {
-	index, editor, tickets, counter, http_port, css_path := NewConfig()
+	index, layout, editor, tickets, counter, http_port, css_path := NewConfig()
 	repo := rep.New(tickets, counter)
-	err := app.Run(index, editor, tickets, counter, http_port, css_path, repo)
+	err := app.Run(index, layout, editor, tickets, counter, http_port, css_path, repo)
 	if err != nil {
 		log.Println("Problem related to starting server", err)
 		return

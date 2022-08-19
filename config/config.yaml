@@ -1,7 +1,7 @@
 http_port: ':5002'
-
-templ_index: './templates/index.html'
-templ_editor: './templates/editor.html'
+templ_layout: './templates/layout'
+templ_index: './templates/index'
+templ_editor: './templates/editor'
 
 tickets: 'tickets.json'
 counter: 'counter'

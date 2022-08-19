@@ -1,13 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width" />
-<title>Система заявок</title>
-<link rel="stylesheet"  type="text/css" href="../css/form-style.css">
-</head>
-<body>
 
-
+{{ define "body" }}
 <h3>Редактирование заявки</h3>
 {{ range .Errors }}
 <p>{{ . }}</p>
@@ -34,6 +26,4 @@
     
   
 </div>
-
-</body>
-</html>
+{{ end }}

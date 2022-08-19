@@ -7,10 +7,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func Run(index, editor, tickets, counter, http_port, css_path string, repo handlers.Tickets) error {
+func Run(index, layout, editor, tickets, counter, http_port, css_path string, repo handlers.Tickets) error {
 
 	r := mux.NewRouter()
-	handler, err := handlers.New(index, editor, tickets, counter, repo)
+	handler, err := handlers.New(index, layout, editor, tickets, counter, repo)
 	if err != nil {
 		return err
 	}
