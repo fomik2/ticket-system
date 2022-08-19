@@ -122,6 +122,7 @@ func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
+	log.Println("sdfesfkhbgsjhfhjkbfew")
 	id, err := getTicketID(writer, r)
 	if err != nil {
 		log.Println(err)
