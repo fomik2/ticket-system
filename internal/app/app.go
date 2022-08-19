@@ -1,19 +1,18 @@
 package app
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/fomik2/ticket-system/internal/handlers"
 	"github.com/gorilla/mux"
 )
 
-func Run(index, editor, tickets, counter, http_port, css_path string, repo handlers.Tickets) {
+func Run(index, editor, tickets, counter, http_port, css_path string, repo handlers.Tickets) error {
 
 	r := mux.NewRouter()
 	handler, err := handlers.New(index, editor, tickets, counter, repo)
 	if err != nil {
-		log.Println("check templates files", err)
+		return err
 	}
 	r.HandleFunc("/", handler.WelcomeHandler).Methods("GET")
 	r.HandleFunc("/", handler.CreateTicket).Methods("POST")
@@ -26,6 +25,7 @@ func Run(index, editor, tickets, counter, http_port, css_path string, repo handl
 
 	err = http.ListenAndServe(http_port, nil)
 	if err != nil {
-		log.Fatal("Problem related to starting HTTP server", err)
+		return err
 	}
+	return nil
 }

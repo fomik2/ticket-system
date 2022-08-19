@@ -49,5 +49,9 @@ func NewConfig() (index, editor, tickets, counter, http_port, css_path string) {
 func main() {
 	index, editor, tickets, counter, http_port, css_path := NewConfig()
 	repo := rep.New(tickets, counter)
-	app.Run(index, editor, tickets, counter, http_port, css_path, repo)
+	err := app.Run(index, editor, tickets, counter, http_port, css_path, repo)
+	if err != nil {
+		log.Println("Problem related to starting server", err)
+		return
+	}
 }

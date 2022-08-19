@@ -29,21 +29,20 @@ type formData struct {
 }
 
 type Handlers struct {
-	repo            Tickets
-	editorTemplPath string
-	ticketsPath     string
-	counterPath     string
-	Templ           *template.Template
+	repo        Tickets
+	ticketsPath string
+	counterPath string
+	indexTempl  *template.Template
+	editorTempl *template.Template
 }
 
 func New(index, editor, tickets, counter string, repo Tickets) (*Handlers, error) {
 	var err error
 	newHandler := Handlers{}
 	newHandler.repo = repo
-	newHandler.editorTemplPath = editor
 	newHandler.ticketsPath = tickets
 	newHandler.counterPath = counter
-	newHandler.Templ, err = parseTemplates(index, editor)
+	newHandler.indexTempl, newHandler.editorTempl, err = parseTemplates(index, editor)
 	if err != nil {
 		return &Handlers{}, fmt.Errorf("error when try to parse templates %w", err)
 	}
@@ -60,12 +59,16 @@ func getTicketID(writer http.ResponseWriter, r *http.Request) (int, error) {
 	return id, nil
 }
 
-func parseTemplates(indexPath, editorPath string) (indexTempl *template.Template, err error) {
-	indexTempl, err = template.ParseFiles(indexPath, editorPath)
+func parseTemplates(indexPath, editorPath string) (indexTempl, editorTempl *template.Template, err error) {
+	indexTempl, err = template.ParseFiles(indexPath)
 	if err != nil {
-		return nil, fmt.Errorf("can't parse id.  %w", err)
+		return nil, nil, fmt.Errorf("can't parse index template.  %w", err)
 	}
-	return indexTempl, nil
+	editorTempl, err = template.ParseFiles(editorPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("can't parse editor template.  %w", err)
+	}
+	return indexTempl, editorTempl, nil
 }
 
 //GetTicketForEdit выбрать заявку для редактирования и показать её
@@ -80,7 +83,7 @@ func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request)
 		log.Println(err)
 		writer.Write([]byte("Internal server Error"))
 	}
-	h.Templ.Execute(writer, formData{
+	h.editorTempl.Execute(writer, formData{
 		Ticket: ticket, Errors: []string{},
 	})
 	if err != nil {
@@ -151,7 +154,7 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 			log.Println("can't load tickets, check data files", err)
 			writer.Write([]byte("Internal server error"))
 		}
-		h.Templ.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
+		h.indexTempl.Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
 		if err != nil {
 			log.Println(err)
 			writer.Write([]byte("Internal server error, can't load template"))
@@ -173,7 +176,7 @@ func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		writer.Write([]byte("Internal server error"))
 	} else {
-		h.Templ.Execute(writer, formData{
+		h.indexTempl.Execute(writer, formData{
 			Ticket: entities.Ticket{}, Errors: []string{}, TicketList: tickets,
 		})
 	}
