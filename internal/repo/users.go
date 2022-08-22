@@ -64,13 +64,3 @@ func (t *Repo) UpdateUser(user entities.Users) (entities.Users, error) {
 	}
 	return entities.Users{}, nil
 }
-
-func (t *Repo) IsUserExistInDB(username string) (int, error) {
-	row := t.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE name=?);", username)
-	var isUserExist int
-	err := row.Scan(&isUserExist)
-	if err != nil {
-		return isUserExist, err
-	}
-	return isUserExist, nil
-}
