@@ -158,7 +158,7 @@ func (h *Handlers) APIGetTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
+		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to get ticket")
 	}
 
 	w.WriteHeader(http.StatusCreated)
