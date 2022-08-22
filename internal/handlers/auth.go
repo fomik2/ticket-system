@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,13 +25,10 @@ func (h *Handlers) CheckPasswordHash(hashedPassFromDB, password string) (bool, e
 	return true, err
 }
 
-// store the secret key in env variable in production
-var store = sessions.NewCookieStore([]byte("my_secret_key"))
-
 //Authentication middleware providing authentiction check for all handlers
 func (h *Handlers) Authentication(f http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, r *http.Request) {
-		session, err := store.Get(r, "session.id")
+		session, err := h.sessionStore.Get(r, "session.id")
 		if err != nil {
 			log.Println(err)
 			writer.Write([]byte("Internal server error"))
@@ -86,7 +82,7 @@ func (h *Handlers) LoginHandler(writer http.ResponseWriter, r *http.Request) {
 
 	if checkPass {
 		// It returns a new session if the sessions doesn't exist
-		session, err := store.Get(r, "session.id")
+		session, err := h.sessionStore.Get(r, "session.id")
 		if err != nil {
 			log.Println(err)
 			writer.Write([]byte("Internal server error. Session cound not been decoded."))
@@ -106,7 +102,7 @@ func (h *Handlers) LoginHandler(writer http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) LogoutHandler(writer http.ResponseWriter, r *http.Request) {
 	// Get registers and returns a session for the given name and session store.
-	session, _ := store.Get(r, "session.id")
+	session, _ := h.sessionStore.Get(r, "session.id")
 	// Set the authenticated value on the session to false
 	session.Values["authenticated"] = false
 	err := session.Save(r, writer)

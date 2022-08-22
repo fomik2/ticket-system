@@ -8,9 +8,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func Run(index, layout, editor, auth, user_create, http_port, css_path, database string, repo handlers.RepoInterface) error {
+func Run(index, layout, editor, auth, user_create, http_port, css_path, database, secret string, repo handlers.RepoInterface) error {
 	r := mux.NewRouter()
-	handler, err := handlers.New(index, layout, editor, auth, user_create, repo)
+	handler, err := handlers.New(index, layout, editor, auth, user_create, secret, repo)
 	if err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func Run(index, layout, editor, auth, user_create, http_port, css_path, database
 
 	r.HandleFunc("/api/create", handler.JWTAuthMiddleWare(handler.APICreateTicket)).Methods("POST")
 	r.HandleFunc("/api/tickets/{id:[0-9]+}", handler.JWTAuthMiddleWare(handler.APIGetTicket)).Methods("GET")
-	r.HandleFunc("/api/tickets/", handler.JWTAuthMiddleWare(handler.APIGetListTickets)).Methods("GET")
+	r.HandleFunc("/api/tickets", handler.JWTAuthMiddleWare(handler.APIGetListTickets)).Methods("GET")
 	r.HandleFunc("/api/tickets/byuser", handler.JWTAuthMiddleWare(handler.APIGetListTicketsByUser)).Methods("GET")
 	r.HandleFunc("/api/tickets/{id:[0-9]+}", handler.JWTAuthMiddleWare(handler.APIUpdateTicket)).Methods("PUT")
 	r.HandleFunc("/api/signin", handler.APISignin).Methods("POST")

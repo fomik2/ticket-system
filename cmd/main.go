@@ -22,10 +22,11 @@ type (
 		Counter    string `yaml:"counter"`
 		CSS_path   string `yaml:"css_path"`
 		Database   string `yaml:"db_file"`
+		SecretKey  string `yaml:"session_and_jwt_secret"`
 	}
 )
 
-func NewConfig() (index, layout, editor, auth, user_create, http_port, css_path, database string) {
+func NewConfig() (index, layout, editor, auth, user_create, http_port, css_path, database, secret string) {
 
 	cfg := &Config{}
 	data, err := os.Open("./config/config.yaml")
@@ -49,18 +50,19 @@ func NewConfig() (index, layout, editor, auth, user_create, http_port, css_path,
 	database = cfg.Database
 	user_create = cfg.UserCreate
 	auth = cfg.Auth
+	secret = cfg.SecretKey
 	return
 }
 
 func main() {
-	index, layout, editor, auth, user_create, http_port, css_path, database := NewConfig()
+	index, layout, editor, auth, user_create, http_port, css_path, database, secret := NewConfig()
 	db, err := sqlite.New(database)
 	if err != nil {
 		log.Println("can't connect to database", err)
 		return
 	}
 	repo := rep.New(db)
-	err = app.Run(index, layout, editor, auth, user_create, http_port, css_path, database, repo)
+	err = app.Run(index, layout, editor, auth, user_create, http_port, css_path, database, secret, repo)
 	if err != nil {
 		log.Println("Problem related to starting server", err)
 		return

@@ -4,6 +4,9 @@ templ_index: './templates/index'
 templ_editor: './templates/editor'
 templ_user_create: './templates/user_create'
 templ_auth: './templates/auth'
+session_and_jwt_secret: 'my_secret_key'
+
+
 
 css_path: './css'
 

@@ -78,7 +78,7 @@ func (h *Handlers) APISignin(writer http.ResponseWriter, r *http.Request) {
 	// Declare the token with the algorithm used for signing, and the claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Create the JWT string
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(h.jwtKey)
 	if err != nil {
 		// If there is an error in creating the JWT return an internal server error
 		writer.WriteHeader(http.StatusInternalServerError)

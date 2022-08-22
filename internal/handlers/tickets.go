@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 
 	"github.com/fomik2/ticket-system/internal/entities"
 )
@@ -39,19 +40,24 @@ type formData struct {
 type Handlers struct {
 	repo            RepoInterface
 	layoutTemplPath string
+	jwtKey          []byte
+	sessionStore    *sessions.CookieStore
 	templs          map[string]*template.Template
 }
 
-func New(index, layout, editor, auth, user_create string, repo RepoInterface) (*Handlers, error) {
+func New(index, layout, editor, auth, user_create, secret string, repo RepoInterface) (*Handlers, error) {
 	var err error
 	newHandler := Handlers{}
 	newHandler.repo = repo
 	newHandler.layoutTemplPath = layout
+	newHandler.jwtKey = []byte(secret)
+
+	// store the secret key in env variable in production
+	newHandler.sessionStore = sessions.NewCookieStore([]byte(secret))
 	newHandler.templs, err = newHandler.parseTemplates(index, editor, auth, user_create)
 	if err != nil {
 		return &Handlers{}, fmt.Errorf("error when try to parse templates %w", err)
 	}
-
 	return &newHandler, nil
 }
 
@@ -152,7 +158,7 @@ func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
 func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 	log.Println("CreateTicket handler in action....", r.Method)
 	//get session values
-	session, err := store.Get(r, "session.id")
+	session, err := h.sessionStore.Get(r, "session.id")
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server error"))
