@@ -18,8 +18,8 @@ func (h *Handlers) HashPassword(password string) (string, error) {
 }
 
 //CheckPasswordHash bcrypt password checking
-func (h *Handlers) CheckPasswordHash(password, hash string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+func (h *Handlers) CheckPasswordHash(hashedPassFromDB, password string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassFromDB), []byte(password))
 	if err != nil {
 		return false, err
 	}
@@ -62,20 +62,22 @@ func (h *Handlers) LoginHandler(writer http.ResponseWriter, r *http.Request) {
 		http.Error(writer, "Please pass the data as URL form encoded", http.StatusBadRequest)
 		return
 	}
-	passHash, err := h.HashPassword(r.Form["password"][0])
-	if err != nil {
-		log.Println(err)
-		writer.Write([]byte("Internal server error while password hashing"))
-		return
-	}
-	user, _ := h.repo.FindUser(r.Form["username"][0], passHash)
+
+	user, err := h.repo.FindUser(r.Form["username"][0])
+
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server error while find user in DB"))
 		return
 	}
 
-	checkPass, err := h.CheckPasswordHash(r.Form["username"][0], passHash)
+	if user.Name == "" {
+		writer.Write([]byte("Unauthorized. (No user found)"))
+		writer.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	checkPass, err := h.CheckPasswordHash(user.Password, r.Form["password"][0])
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server error while compare password with hash"))

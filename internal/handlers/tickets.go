@@ -26,7 +26,7 @@ type RepoInterface interface {
 	UpdateUser(entities.Users) (entities.Users, error)
 	DeleteUser(id int) error
 	IsUserExistInDB(username, password string) (int, error)
-	FindUser(username, password string) (entities.Users, error)
+	FindUser(username string) (entities.Users, error)
 }
 
 /*formData передеается в темплейт при вызове editHandler или welcomeHandler*/

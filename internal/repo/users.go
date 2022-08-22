@@ -36,8 +36,8 @@ func (t *Repo) DeleteUser(id int) error {
 	return nil
 }
 
-func (t *Repo) FindUser(username, password string) (entities.Users, error) {
-	row := t.db.QueryRow("SELECT * FROM users WHERE name=? AND password=?;", username, password)
+func (t *Repo) FindUser(username string) (entities.Users, error) {
+	row := t.db.QueryRow("SELECT * FROM users WHERE name=?;", username)
 	user := entities.Users{}
 	err := row.Scan(&user.ID, &user.Name, &user.Password, &user.Email, &user.CreatedAt)
 	if err == sql.ErrNoRows {

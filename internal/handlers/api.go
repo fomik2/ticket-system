@@ -28,30 +28,41 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var users = map[string]string{
-	"user1": "password1",
-	"user2": "password2",
-}
-
 // Create the Signin handler
-func (h *Handlers) Signin(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) APISignin(writer http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 	// Get the JSON body and decode into credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
 		// If the structure of the body is wrong, return an HTTP error
-		w.WriteHeader(http.StatusBadRequest)
+		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// Get the expected password from our in memory map
-	expectedPassword, ok := users[creds.Username]
+	user, err := h.repo.FindUser(creds.Username)
 
-	// If a password exists for the given user
-	// AND, if it is the same as the password we received, the we can move ahead
-	// if NOT, then we return an "Unauthorized" status
-	if !ok || expectedPassword != creds.Password {
-		w.WriteHeader(http.StatusUnauthorized)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server error while find user in DB"))
+		return
+	}
+
+	if user.Name == "" {
+		writer.Write([]byte("Unauthorized. (No user found)"))
+		writer.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	checkPass, err := h.CheckPasswordHash(user.Password, creds.Password)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server error while compare password with hash"))
+		return
+	}
+
+	//if password hashes doesn't match
+	if !checkPass {
+		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -69,13 +80,13 @@ func (h *Handlers) Signin(w http.ResponseWriter, r *http.Request) {
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
 		// If there is an error in creating the JWT return an internal server error
-		w.WriteHeader(http.StatusInternalServerError)
+		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Finally, we set the client cookie for "token" as the JWT we just generated
 	// we also set an expiry time which is the same as the token itself
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(writer, &http.Cookie{
 		Name:    "token",
 		Value:   tokenString,
 		Expires: expirationTime,
