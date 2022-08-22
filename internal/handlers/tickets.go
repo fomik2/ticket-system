@@ -14,12 +14,19 @@ import (
 	"github.com/fomik2/ticket-system/internal/entities"
 )
 
-type Tickets interface {
-	Get(id int) (entities.Ticket, error)
-	List() ([]entities.Ticket, error)
-	Create(entities.Ticket) (entities.Ticket, error)
-	Update(entities.Ticket) (entities.Ticket, error)
-	Delete(id int) error
+type RepoInterface interface {
+	GetTicket(id int) (entities.Ticket, error)
+	ListTickets() ([]entities.Ticket, error)
+	CreateTicket(entities.Ticket) (entities.Ticket, error)
+	UpdateTicket(entities.Ticket) (entities.Ticket, error)
+	DeleteTicket(id int) error
+	GetUser(id int) (entities.Users, error)
+	ListUsers() ([]entities.Users, error)
+	CreateUser(entities.Users) (entities.Users, error)
+	UpdateUser(entities.Users) (entities.Users, error)
+	DeleteUser(id int) error
+	IsUserExistInDB(username, password string) (int, error)
+	FindUser(username, password string) (entities.Users, error)
 }
 
 /*formData передеается в темплейт при вызове editHandler или welcomeHandler*/
@@ -30,24 +37,21 @@ type formData struct {
 }
 
 type Handlers struct {
-	repo            Tickets
-	ticketsPath     string
-	counterPath     string
+	repo            RepoInterface
 	layoutTemplPath string
 	templs          map[string]*template.Template
 }
 
-func New(index, layout, editor, tickets, counter string, repo Tickets) (*Handlers, error) {
+func New(index, layout, editor, auth, user_create string, repo RepoInterface) (*Handlers, error) {
 	var err error
 	newHandler := Handlers{}
-	newHandler.ticketsPath = tickets
-	newHandler.counterPath = counter
 	newHandler.repo = repo
 	newHandler.layoutTemplPath = layout
-	newHandler.templs, err = newHandler.parseTemplates(index, editor)
+	newHandler.templs, err = newHandler.parseTemplates(index, editor, auth, user_create)
 	if err != nil {
 		return &Handlers{}, fmt.Errorf("error when try to parse templates %w", err)
 	}
+
 	return &newHandler, nil
 }
 
@@ -71,7 +75,6 @@ func (h *Handlers) parseTemplates(templPathes ...string) (map[string]*template.T
 			return nil, fmt.Errorf("can't parse index template.  %w", err)
 		}
 	}
-	fmt.Println(templs)
 	return templs, nil
 }
 
@@ -85,7 +88,7 @@ func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request)
 		writer.Write([]byte("Internal server Error"))
 		return
 	}
-	ticket, err := h.repo.Get(id)
+	ticket, err := h.repo.GetTicket(id)
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server Error"))
@@ -110,7 +113,7 @@ func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
 		writer.Write([]byte("Internal server Error"))
 		return
 	}
-	currentTicket, err := h.repo.Get(id)
+	currentTicket, err := h.repo.GetTicket(id)
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server error"))
@@ -119,7 +122,7 @@ func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
 	currentTicket.Description = r.Form["description"][0]
 	currentTicket.Title = r.Form["title"][0]
 	currentTicket.Severity = r.Form["severity"][0]
-	_, err = h.repo.Update(currentTicket)
+	_, err = h.repo.UpdateTicket(currentTicket)
 	if err != nil {
 		log.Println("can't update ticket", err)
 		writer.Write([]byte("Internal server error"))
@@ -136,7 +139,7 @@ func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
 		writer.Write([]byte("Internal server Error"))
 		return
 	}
-	err = h.repo.Delete(id)
+	err = h.repo.DeleteTicket(id)
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server Error"))
@@ -148,6 +151,14 @@ func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
 //CreateTicket создание новой заявки
 func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 	log.Println("CreateTicket handler in action....", r.Method)
+	//get session values
+	session, err := store.Get(r, "session.id")
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server error"))
+		return
+	}
+	userEmail := session.Values["email"]
 	r.ParseForm()
 	responseData := entities.Ticket{
 		Title:       r.Form["title"][0],
@@ -155,7 +166,9 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 		Severity:    r.Form["severity"][0],
 		Status:      "Создана",
 		CreatedAt:   time.Now().Local(),
+		OwnerEmail:  userEmail,
 	}
+	fmt.Println(responseData)
 	errors := []string{}
 	if responseData.Title == "" {
 		errors = append(errors, "Введите название заявки")
@@ -164,7 +177,7 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 		errors = append(errors, "Введите описание")
 	}
 	if len(errors) > 0 {
-		tickets, err := h.repo.List()
+		tickets, err := h.repo.ListTickets()
 		if err != nil {
 			log.Println("can't load tickets, check data files", err)
 			writer.Write([]byte("Internal server error"))
@@ -177,7 +190,7 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		_, err := h.repo.Create(responseData)
+		_, err := h.repo.CreateTicket(responseData)
 		if err != nil {
 			log.Println(err)
 			writer.Write([]byte("Internal server error"))
@@ -190,17 +203,18 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 //welcomeHandler отображение формы и списка всех заявок
 func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request) {
 	log.Println("Welcome handler in action....", r.Method)
-	tickets, err := h.repo.List()
+	tickets, err := h.repo.ListTickets()
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server error"))
+		return
 	} else {
 		h.templs["index"].Execute(writer, formData{
 			Ticket: entities.Ticket{}, Errors: []string{}, TicketList: tickets,
 		})
 	}
 	if err != nil {
-		log.Println("can't open template file", err)
+		log.Println(err)
 		writer.Write([]byte("Internal server error"))
 		return
 	}

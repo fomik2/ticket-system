@@ -1,0 +1,18 @@
+
+{{ define "body" }}
+<h3>Аутентификация</h3>
+{{ range .Errors }}
+<p>{{ . }}</p>
+{{ end }}
+<div>
+  <form method="POST">
+    <label for="title">Имя пользователя</label>
+    <input type="text" id="title" name="username" placeholder="Имя пользователя" value={{.Name}}>
+
+    <label for="description">Пароль</label>
+    <input type="password" id="description" name="password" placeholder="Введите пароль" value={{.Password}}>
+
+    <input type="submit" name="action" value="Войти">
+  
+</div>
+{{ end }}

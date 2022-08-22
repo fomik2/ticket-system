@@ -7,22 +7,25 @@ import (
 
 	"github.com/fomik2/ticket-system/internal/app"
 	rep "github.com/fomik2/ticket-system/internal/repo"
+	"github.com/fomik2/ticket-system/pkg/sqlite"
 	"gopkg.in/yaml.v3"
 )
 
 type (
 	Config struct {
-		HTTP_port string `yaml:"http_port"`
-		Index     string `yaml:"templ_index"`
-		Layout    string `yaml:"templ_layout"`
-		Editor    string `yaml:"templ_editor"`
-		Tickets   string `yaml:"tickets"`
-		Counter   string `yaml:"counter"`
-		CSS_path  string `yaml:"css_path"`
+		HTTP_port  string `yaml:"http_port"`
+		Index      string `yaml:"templ_index"`
+		Layout     string `yaml:"templ_layout"`
+		Editor     string `yaml:"templ_editor"`
+		UserCreate string `yaml:"templ_user_create"`
+		Auth       string `yaml:"templ_auth"`
+		Counter    string `yaml:"counter"`
+		CSS_path   string `yaml:"css_path"`
+		Database   string `yaml:"db_file"`
 	}
 )
 
-func NewConfig() (index, layout, editor, tickets, counter, http_port, css_path string) {
+func NewConfig() (index, layout, editor, auth, user_create, http_port, css_path, database string) {
 
 	cfg := &Config{}
 	data, err := os.Open("./config/config.yaml")
@@ -41,17 +44,23 @@ func NewConfig() (index, layout, editor, tickets, counter, http_port, css_path s
 	index = cfg.Index
 	editor = cfg.Editor
 	layout = cfg.Layout
-	tickets = cfg.Tickets
-	counter = cfg.Counter
 	http_port = cfg.HTTP_port
 	css_path = cfg.CSS_path
+	database = cfg.Database
+	user_create = cfg.UserCreate
+	auth = cfg.Auth
 	return
 }
 
 func main() {
-	index, layout, editor, tickets, counter, http_port, css_path := NewConfig()
-	repo := rep.New(tickets, counter)
-	err := app.Run(index, layout, editor, tickets, counter, http_port, css_path, repo)
+	index, layout, editor, auth, user_create, http_port, css_path, database := NewConfig()
+	db, err := sqlite.New(database)
+	if err != nil {
+		log.Println("can't connect to database", err)
+		return
+	}
+	repo := rep.New(db)
+	err = app.Run(index, layout, editor, auth, user_create, http_port, css_path, database, repo)
 	if err != nil {
 		log.Println("Problem related to starting server", err)
 		return
