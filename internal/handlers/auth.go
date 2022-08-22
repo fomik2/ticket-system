@@ -5,7 +5,26 @@ import (
 	"net/http"
 
 	"github.com/gorilla/sessions"
+	"golang.org/x/crypto/bcrypt"
 )
+
+//HashPassword bcrypt password hashing
+func (h *Handlers) HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		return string(bytes), err
+	}
+	return string(bytes), err
+}
+
+//CheckPasswordHash bcrypt password checking
+func (h *Handlers) CheckPasswordHash(password, hash string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil {
+		return false, err
+	}
+	return true, err
+}
 
 // store the secret key in env variable in production
 var store = sessions.NewCookieStore([]byte("my_secret_key"))
@@ -43,13 +62,27 @@ func (h *Handlers) LoginHandler(writer http.ResponseWriter, r *http.Request) {
 		http.Error(writer, "Please pass the data as URL form encoded", http.StatusBadRequest)
 		return
 	}
-	user, _ := h.repo.FindUser(r.Form["username"][0], r.Form["password"][0])
+	passHash, err := h.HashPassword(r.Form["password"][0])
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error"))
+		writer.Write([]byte("Internal server error while password hashing"))
 		return
 	}
-	if user.Name != "" {
+	user, _ := h.repo.FindUser(r.Form["username"][0], passHash)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server error while find user in DB"))
+		return
+	}
+
+	checkPass, err := h.CheckPasswordHash(r.Form["username"][0], passHash)
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server error while compare password with hash"))
+		return
+	}
+
+	if checkPass {
 		// It returns a new session if the sessions doesn't exist
 		session, err := store.Get(r, "session.id")
 		if err != nil {

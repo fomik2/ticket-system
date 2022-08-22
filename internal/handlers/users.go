@@ -24,12 +24,18 @@ func (h *Handlers) CreateUserGet(writer http.ResponseWriter, r *http.Request) {
 func (h *Handlers) CreateUser(writer http.ResponseWriter, r *http.Request) {
 	log.Println("Create user insert to table handler in action....", r.Method)
 	r.ParseForm()
+	var err error
 	newUser := entities.Users{}
 	newUser.Name = r.Form["name"][0]
 	newUser.Email = r.Form["email"][0]
-	newUser.Password = r.Form["password"][0]
+	newUser.Password, err = h.HashPassword(r.Form["password"][0])
+	if err != nil {
+		log.Println(err)
+		writer.Write([]byte("Internal server error"))
+		return
+	}
 	newUser.CreatedAt = time.Now().Local()
-	_, err := h.repo.CreateUser(newUser)
+	_, err = h.repo.CreateUser(newUser)
 	if err != nil {
 		log.Println(err)
 		writer.Write([]byte("Internal server error"))
