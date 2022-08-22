@@ -35,10 +35,10 @@ func (h *Handlers) CreateUser(writer http.ResponseWriter, r *http.Request) {
 		return
 	}
 	newUser.CreatedAt = time.Now().Local()
+
 	_, err = h.repo.CreateUser(newUser)
 	if err != nil {
-		log.Println(err)
-		writer.Write([]byte("Internal server error"))
+		writer.Write([]byte(err.Error()))
 		return
 	}
 	http.Redirect(writer, r, "/", http.StatusSeeOther)

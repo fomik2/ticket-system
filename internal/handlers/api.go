@@ -28,7 +28,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// Create the Signin handler
+//APISignin create JWT token if user exist in DB, if not -- return unauthorized response code
 func (h *Handlers) APISignin(writer http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 	// Get the JSON body and decode into credentials
@@ -47,6 +47,7 @@ func (h *Handlers) APISignin(writer http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//if user not found in DB by login
 	if user.Name == "" {
 		writer.Write([]byte("Unauthorized. (No user found)"))
 		writer.WriteHeader(http.StatusUnauthorized)
@@ -91,6 +92,11 @@ func (h *Handlers) APISignin(writer http.ResponseWriter, r *http.Request) {
 		Value:   tokenString,
 		Expires: expirationTime,
 	})
+	http.SetCookie(writer, &http.Cookie{
+		Name:    "email",
+		Value:   user.Email,
+		Expires: expirationTime,
+	})
 }
 
 //JWT middleware providing authentiction check for all handlers
@@ -109,6 +115,7 @@ func (h *Handlers) JWTAuthMiddleWare(f http.HandlerFunc) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		f(w, r)
 	}
 }
@@ -138,9 +145,6 @@ func (h *Handlers) CheckJWT(w http.ResponseWriter, r *http.Request) (*jwt.Token,
 	}
 	return tkn, nil
 
-	// Finally, return the welcome message to the user, along with their
-	// username given in the token
-	//w.Write([]byte(fmt.Sprintf("Welcome %s!", claims.Username)))
 }
 
 func (h *Handlers) APICreateTicket(w http.ResponseWriter, r *http.Request) {
@@ -171,7 +175,50 @@ func (h *Handlers) APIGetTicket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to get ticket")
 	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(ticket)
+}
 
+func (h *Handlers) APIGetListTickets(w http.ResponseWriter, r *http.Request) {
+	ticketList, err := h.repo.ListTickets()
+	if err != nil {
+		log.Println(err)
+		w.Write([]byte("Internal server Error when retrive tickets list"))
+		return
+	}
+	json.NewEncoder(w).Encode(ticketList)
+}
+
+func (h *Handlers) APIGetListTicketsByUser(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie("email")
+	if err != nil {
+		log.Println(err)
+		w.Write([]byte("Internal server Error when email from cookies"))
+		return
+	}
+	email := c.Value
+	ticketList, err := h.repo.ListTicketsByUser(email)
+	if err != nil {
+		log.Println(err)
+		w.Write([]byte("Internal server Error when retrive tickets list"))
+		return
+	}
+	json.NewEncoder(w).Encode(ticketList)
+}
+
+func (h *Handlers) APIUpdateTicket(w http.ResponseWriter, r *http.Request) {
+	ticket := entities.Ticket{}
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
+	}
+	json.Unmarshal(reqBody, &ticket)
+	_, err = h.repo.UpdateTicket(ticket)
+	if err != nil {
+		log.Println(err)
+		w.Write([]byte("Internal server Error when updatetin particular ticket"))
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(ticket)
 }

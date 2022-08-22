@@ -64,6 +64,25 @@ func (t *Repo) ListTickets() ([]entities.Ticket, error) {
 	return data, nil
 }
 
+func (t *Repo) ListTicketsByUser(email string) ([]entities.Ticket, error) {
+	rows, err := t.db.Query("SELECT * FROM tickets WHERE owner=? ORDER BY id;", email)
+	data := []entities.Ticket{}
+	if err != nil {
+		return []entities.Ticket{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		i := entities.Ticket{}
+		err = rows.Scan(&i.Number, &i.Title, &i.Description, &i.Status, &i.Severity, &i.SLA, &i.CreatedAt, &i.OwnerEmail)
+
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, i)
+	}
+	return data, nil
+}
+
 func (t *Repo) GetTicket(id int) (entities.Ticket, error) {
 	row := t.db.QueryRow("SELECT * FROM tickets WHERE id=?;", id)
 	ticket := entities.Ticket{}

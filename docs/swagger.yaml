@@ -1,0 +1,219 @@
+openapi: 3.0.3
+info:
+  title: Ticket System - OpenAPI 3.0
+    
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: admin@admin.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.11
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
+servers:
+  - url: http://192.168.56.102:5002/
+tags:
+  - name: Auth
+    description: Authorization
+    
+  - name: Tickets
+    description: Retrive one ticket or ticket list
+    
+paths:
+  /api/signin:
+    post:
+      tags:
+        - Auth
+      summary: SignIn
+      description: Login to the system for further usage
+      operationId: signIn
+      requestBody:
+        description: Use your credential here
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth'
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          
+  /api/create:
+    post:
+      tags:
+        - Tickets
+      summary: Create ticket
+      description: You can create ticket
+      operationId: create
+      security:
+        - BearerAuth: [admin]
+      requestBody:
+        description: Use your credential here
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ticket'
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+          
+  /api/ticket/{id}:
+    get:
+      tags:
+        - Tickets
+      summary: Get particular ticket from the system
+      description: You can create ticket
+      operationId: getticket
+      security:
+        - BearerAuth: [admin]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Successful operation
+        '401':
+          description: Unauthorized
+          
+  /api/tickets:
+    get:
+      tags:
+        - Tickets
+      summary: Tickets
+      description: Retrieve all tickets which are located in the system
+      operationId: Tickets
+      security:
+        - BearerAuth: [admin]
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/TicketList'
+               
+        '401':
+          description: Unauthorized
+          
+  /api/tickets/byuser:
+    get:
+      tags:
+        - Tickets
+      summary: Tickets by particular user
+      description: Retrieve all tickets for current user which is logined to system
+      operationId: TicketsByUser
+      security:
+        - BearerAuth: [admin]
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/TicketList'
+               
+        '401':
+          description: Unauthorized
+
+components:
+  schemas:
+    Auth:
+      type: object
+      properties:
+        username:
+          type: string
+          description: username
+          example: admin
+        password:
+          type: string
+          description: password
+          example: admin
+    TicketList:
+      type: array
+      items:
+        type: object
+        properties:
+          Title:
+            type: string
+            description: title of particular ticket
+            example: Some text here...
+          Description:
+            type: string
+            description: password
+            example: Some text here...
+          Status:
+            type: string
+            description: username
+            example: Создана
+          Severity:
+            type: integer
+            description: Severity
+            example: 5
+          SLA:
+            type: integer
+            description: Service level agreement
+            example: admin
+          CreatedAt:
+            type: string
+            description: password
+            example: 2022-08-21T14:47:00Z
+          ID:
+            type: integer
+            description: Ticket ID
+            example: 1
+          OwnerEmail:
+            type: string
+            description: owner email
+            example: admin@admin.com
+    Ticket:
+      type: object
+      properties:
+        Title:
+          type: string
+          description: title of particular ticket
+          example: Some text here...
+        Description:
+          type: string
+          description: password
+          example: Some text here...
+        Status:
+          type: string
+          description: username
+          example: Создана
+        Severity:
+          type: integer
+          description: Severity
+          example: 5
+        SLA:
+          type: integer
+          description: Service level agreement
+          example: admin
+        CreatedAt:
+          type: string
+          description: password
+          example: 2022-08-21T14:47:00Z
+        ID:
+          type: integer
+          description: Ticket ID
+          example: 1
+        OwnerEmail:
+          type: string
+          description: owner email
+          example: admin@admin.com
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+   

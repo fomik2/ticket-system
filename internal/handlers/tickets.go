@@ -22,10 +22,10 @@ type RepoInterface interface {
 	DeleteTicket(id int) error
 	GetUser(id int) (entities.Users, error)
 	ListUsers() ([]entities.Users, error)
+	ListTicketsByUser(email string) ([]entities.Ticket, error)
 	CreateUser(entities.Users) (entities.Users, error)
 	UpdateUser(entities.Users) (entities.Users, error)
 	DeleteUser(id int) error
-	IsUserExistInDB(username, password string) (int, error)
 	FindUser(username string) (entities.Users, error)
 }
 

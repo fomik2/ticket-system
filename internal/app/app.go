@@ -21,6 +21,9 @@ func Run(index, layout, editor, auth, user_create, http_port, css_path, database
 
 	r.HandleFunc("/api/create", handler.JWTAuthMiddleWare(handler.APICreateTicket)).Methods("POST")
 	r.HandleFunc("/api/tickets/{id:[0-9]+}", handler.JWTAuthMiddleWare(handler.APIGetTicket)).Methods("GET")
+	r.HandleFunc("/api/tickets/", handler.JWTAuthMiddleWare(handler.APIGetListTickets)).Methods("GET")
+	r.HandleFunc("/api/tickets/byuser", handler.JWTAuthMiddleWare(handler.APIGetListTicketsByUser)).Methods("GET")
+	r.HandleFunc("/api/tickets/{id:[0-9]+}", handler.JWTAuthMiddleWare(handler.APIUpdateTicket)).Methods("PUT")
 	r.HandleFunc("/api/signin", handler.APISignin).Methods("POST")
 
 	r.HandleFunc("/", handler.Authentication(handler.WelcomeHandler)).Methods("GET")

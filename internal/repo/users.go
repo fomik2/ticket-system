@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/fomik2/ticket-system/internal/entities"
 )
@@ -21,7 +22,14 @@ func (t *Repo) ListUsers() ([]entities.Users, error) {
 }
 
 func (t *Repo) CreateUser(user entities.Users) (entities.Users, error) {
-	_, err := t.db.Exec("INSERT INTO users VALUES(NULL,?,?,?,?);", user.Name, user.Password, user.Email, user.CreatedAt.Format("2006-01-02 15:04"))
+	checkIfExist, err := t.FindUser(user.Name)
+	if err != nil {
+		return entities.Users{}, err
+	}
+	if checkIfExist.Name != "" {
+		return entities.Users{}, fmt.Errorf("user already exist")
+	}
+	_, err = t.db.Exec("INSERT INTO users VALUES(NULL,?,?,?,?);", user.Name, user.Password, user.Email, user.CreatedAt.Format("2006-01-02 15:04"))
 	if err != nil {
 		return entities.Users{}, err
 	}
@@ -57,8 +65,8 @@ func (t *Repo) UpdateUser(user entities.Users) (entities.Users, error) {
 	return entities.Users{}, nil
 }
 
-func (t *Repo) IsUserExistInDB(username, password string) (int, error) {
-	row := t.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE name=? AND password=?);", username, password)
+func (t *Repo) IsUserExistInDB(username string) (int, error) {
+	row := t.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE name=?);", username)
 	var isUserExist int
 	err := row.Scan(&isUserExist)
 	if err != nil {
