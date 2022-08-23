@@ -16,11 +16,19 @@ import (
 )
 
 type RepoInterface interface {
+	Tickets
+	Users
+}
+
+type Tickets interface {
 	GetTicket(id int) (entities.Ticket, error)
 	ListTickets() ([]entities.Ticket, error)
 	CreateTicket(entities.Ticket) (entities.Ticket, error)
 	UpdateTicket(entities.Ticket) (entities.Ticket, error)
 	DeleteTicket(id int) error
+}
+
+type Users interface {
 	GetUser(id int) (entities.Users, error)
 	ListUsers() ([]entities.Users, error)
 	ListTicketsByUser(email string) ([]entities.Ticket, error)
