@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/fomik2/ticket-system/internal/handlers"
-
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func Run(index, layout, editor, auth, user_create, http_port, css_path, database, secret string, repo handlers.RepoInterface) error {
@@ -14,6 +14,17 @@ func Run(index, layout, editor, auth, user_create, http_port, css_path, database
 	if err != nil {
 		return err
 	}
+
+	// var pingCounter = prometheus.NewCounter(
+	// 	prometheus.CounterOpts{
+	// 		Name: "ping_request_count",
+	// 		Help: "No of request handled by Ping handler",
+	// 	},
+	// )
+
+	//Prometheus metrics
+	http.Handle("/metrics", promhttp.Handler())
+	http.ListenAndServe(":2112", nil)
 
 	r.HandleFunc("/login", handler.Login).Methods("GET")
 	r.HandleFunc("/login", handler.LoginHandler).Methods("POST")
