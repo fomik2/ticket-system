@@ -12,6 +12,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/labstack/echo-contrib/prometheus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -46,7 +48,6 @@ func NewConfig() (Config, error) {
 	if err != nil {
 		log.Println("Не могу распарсить файл конфигурации", err)
 	}
-
 	return cfg, err
 }
 
@@ -94,6 +95,9 @@ func main() {
 	e.POST("/login", handler.LoginHandler)
 	e.GET("/logout", handler.LogoutHandler)
 
+	p := prometheus.NewPrometheus("echo", nil)
+	p.Use(e)
+
 	// API restricted group with JWT
 
 	apiGR := e.Group("/api/tickets/")
@@ -111,6 +115,7 @@ func main() {
 
 	//HTTP restricted group auth without JWT
 	httpGR := e.Group("/")
+
 	httpGR.Use(handler.Authentication)
 	httpGR.GET("", handler.WelcomeHandler)
 
