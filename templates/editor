@@ -22,7 +22,7 @@
     </select>
     <input type="submit" name="action" value="Редактировать">
   </form>
-    <form method="post" action="/tickets/{{ .Number}}/delete/"><input type="submit" name="action"  value="Удалить"></form>
+    <form method="POST" action="/tickets/{{ .Number}}/delete/"><input type="submit" name="action"  value="Удалить"></form>
     
   
 </div>

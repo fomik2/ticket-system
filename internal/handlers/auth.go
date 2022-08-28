@@ -4,10 +4,11 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
-//HashPassword bcrypt password hashing
+// HashPassword bcrypt password hashing
 func (h *Handlers) HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
@@ -16,7 +17,7 @@ func (h *Handlers) HashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-//CheckPasswordHash bcrypt password checking
+// CheckPasswordHash bcrypt password checking
 func (h *Handlers) CheckPasswordHash(hashedPassFromDB, password string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassFromDB), []byte(password))
 	if err != nil {
@@ -25,92 +26,94 @@ func (h *Handlers) CheckPasswordHash(hashedPassFromDB, password string) (bool, e
 	return true, err
 }
 
-//Authentication middleware providing authentiction check for all handlers
-func (h *Handlers) Authentication(f http.HandlerFunc) http.HandlerFunc {
-	return func(writer http.ResponseWriter, r *http.Request) {
-		session, err := h.sessionStore.Get(r, "session.id")
+// Authentication middleware providing authentiction check for all handlers
+func (h *Handlers) Authentication(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		session, err := h.sessionStore.Get(c.Request(), "session.id")
 		if err != nil {
 			log.Println(err)
-			writer.Write([]byte("Internal server error"))
-			return
+			c.Response().Write([]byte("Internal server error"))
+			c.Response().WriteHeader(http.StatusInternalServerError)
+			return err
 		}
 		authenticated := session.Values["authenticated"]
 		if authenticated != nil && authenticated != false {
-			f(writer, r)
+			next(c)
 		} else {
-			if r.RequestURI != "/login" {
-				http.Redirect(writer, r, "/login", http.StatusSeeOther)
+			if c.Request().RequestURI != "/login" {
+				http.Redirect(c.Response(), c.Request(), "/login", http.StatusSeeOther)
 			}
 		}
+		return nil
 	}
 }
 
-func (h *Handlers) Login(writer http.ResponseWriter, r *http.Request) {
-	log.Println("Login handler in action....", r.Method)
-	h.templs["auth"].Execute(writer, nil)
+func (h *Handlers) Login(c echo.Context) error {
+	log.Println("Login handler in action....", c.Request().Method)
+	h.templs["auth"].Execute(c.Response(), nil)
+	return nil
 }
 
-func (h *Handlers) LoginHandler(writer http.ResponseWriter, r *http.Request) {
-	log.Println("LoginHandler in action....Authentication process...", r.Method)
+func (h *Handlers) LoginHandler(c echo.Context) error {
+	log.Println("LoginHandler in action....Authentication process...", c.Request().Method)
 	// ParseForm parses the raw query from the URL and updates r.Form
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(writer, "Please pass the data as URL form encoded", http.StatusBadRequest)
-		return
-	}
 
-	user, err := h.repo.FindUser(r.Form["username"][0])
+	user, err := h.repo.FindUser(c.FormValue("username"))
 
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error while find user in DB"))
-		return
+		c.Response().Write([]byte("Internal server error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 
 	if user.Name == "" {
-		writer.Write([]byte("Unauthorized. (No user found)"))
-		writer.WriteHeader(http.StatusUnauthorized)
-		return
+		c.Response().Write([]byte("Unauthorized. (No user found)"))
+		c.Response().WriteHeader(http.StatusUnauthorized)
+		return err
 	}
 
-	checkPass, err := h.CheckPasswordHash(user.Password, r.Form["password"][0])
+	checkPass, err := h.CheckPasswordHash(user.Password, c.FormValue("password"))
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error while compare password with hash"))
-		return
+		c.Response().Write([]byte("Internal server error while compare password with hash"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 
 	if checkPass {
 		// It returns a new session if the sessions doesn't exist
-		session, err := h.sessionStore.Get(r, "session.id")
+		session, err := h.sessionStore.Get(c.Request(), "session.id")
 		if err != nil {
 			log.Println(err)
-			writer.Write([]byte("Internal server error. Session cound not been decoded."))
-			return
+			c.Response().Write([]byte("Internal server error. Session cound not been decoded."))
+			c.Response().WriteHeader(http.StatusInternalServerError)
+			return err
 		}
 		session.Values["authenticated"] = true
 		session.Values["email"] = user.Email
 		// Saves all sessions used during the current request
-		session.Save(r, writer)
-		http.Redirect(writer, r, "/", http.StatusSeeOther)
+		session.Save(c.Request(), c.Response())
+		http.Redirect(c.Response(), c.Request(), "/", http.StatusSeeOther)
 
 	} else {
-		http.Error(writer, "Invalid Credentials", http.StatusUnauthorized)
+		http.Error(c.Response(), "Invalid Credentials", http.StatusUnauthorized)
 	}
-
+	return nil
 }
 
-func (h *Handlers) LogoutHandler(writer http.ResponseWriter, r *http.Request) {
+func (h *Handlers) LogoutHandler(c echo.Context) error {
 	// Get registers and returns a session for the given name and session store.
-	session, _ := h.sessionStore.Get(r, "session.id")
+	session, _ := h.sessionStore.Get(c.Request(), "session.id")
 	// Set the authenticated value on the session to false
 	session.Values["authenticated"] = false
-	err := session.Save(r, writer)
+	err := session.Save(c.Request(), c.Response())
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error. Session cound not been saved."))
-		return
+		c.Response().Write([]byte("Internal server error. Session cound not been saved."))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	http.Redirect(writer, r, "/login", http.StatusSeeOther)
-
+	http.Redirect(c.Response(), c.Request(), "/login", http.StatusSeeOther)
+	return nil
 }

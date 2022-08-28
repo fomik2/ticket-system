@@ -6,219 +6,190 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/fomik2/ticket-system/internal/entities"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt"
+	"github.com/labstack/echo/v4"
 )
 
-// Create the JWT key used to create the signature
-var jwtKey = []byte("my_secret_key")
-
-// Create a struct to read the username and password from the request body
-type Credentials struct {
+type JWTCustomClaims struct {
+	Username string `json:"username"`
 	Password string `json:"password"`
-	Username string `json:"username"`
+	jwt.StandardClaims
 }
 
-// Create a struct that will be encoded to a JWT.
-// We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
-type Claims struct {
-	Username string `json:"username"`
-	jwt.RegisteredClaims
-}
+// APISignin create JWT token if user exist in DB, if not -- return unauthorized response code
+func (h *Handlers) APISignin(c echo.Context) error {
 
-//APISignin create JWT token if user exist in DB, if not -- return unauthorized response code
-func (h *Handlers) APISignin(writer http.ResponseWriter, r *http.Request) {
-	var creds Credentials
+	var claims JWTCustomClaims
 	// Get the JSON body and decode into credentials
-	err := json.NewDecoder(r.Body).Decode(&creds)
+	err := json.NewDecoder(c.Request().Body).Decode(&claims)
 	if err != nil {
 		// If the structure of the body is wrong, return an HTTP error
-		writer.WriteHeader(http.StatusBadRequest)
-		return
+		c.Response().WriteHeader(http.StatusBadRequest)
+		return err
 	}
 
-	user, err := h.repo.FindUser(creds.Username)
+	user, err := h.repo.FindUser(claims.Username)
 
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error while find user in DB"))
-		return
+		c.Response().Write([]byte("Internal server error while find user in DB"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 
 	//if user not found in DB by login
 	if user.Name == "" {
-		writer.Write([]byte("Unauthorized. (No user found)"))
-		writer.WriteHeader(http.StatusUnauthorized)
-		return
+		c.Response().Write([]byte("Unauthorized. (No user found)"))
+		c.Response().WriteHeader(http.StatusUnauthorized)
+		return err
 	}
 
-	checkPass, err := h.CheckPasswordHash(user.Password, creds.Password)
+	checkPass, err := h.CheckPasswordHash(user.Password, claims.Password)
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error while compare password with hash"))
-		return
+		c.Response().Write([]byte("Internal server error while compare password with hash"))
+		c.Response().WriteHeader(http.StatusUnauthorized)
+		return err
 	}
 
 	//if password hashes doesn't match
 	if !checkPass {
-		writer.WriteHeader(http.StatusUnauthorized)
-		return
+		c.Response().WriteHeader(http.StatusUnauthorized)
+		return err
 	}
 
 	// Declare the expiration time of the token
-	// here, we have kept it as 5 minutes
-	expirationTime := time.Now().Add(5 * time.Minute)
-	// Create the JWT claims, which includes the username and expiry time
-	claims := &Claims{
-		Username: creds.Username,
-	}
-	claims.ExpiresAt = jwt.NewNumericDate(expirationTime)
-	// Declare the token with the algorithm used for signing, and the claims
+	claims.ExpiresAt = time.Now().Add(5 * time.Minute).Unix()
+
+	// Create token with claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// Create the JWT string
-	tokenString, err := token.SignedString(h.jwtKey)
+	// Generate encoded token and send it as response.
+	t, err := token.SignedString([]byte(h.jwtKey))
 	if err != nil {
-		// If there is an error in creating the JWT return an internal server error
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	// Finally, we set the client cookie for "token" as the JWT we just generated
-	// we also set an expiry time which is the same as the token itself
-	http.SetCookie(writer, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
-		Expires: expirationTime,
+	cookie := new(http.Cookie)
+	cookie.Name = "email"
+	cookie.Value = user.Email
+	c.SetCookie(cookie)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"token": t,
+		"email": user.Email,
 	})
-	http.SetCookie(writer, &http.Cookie{
-		Name:    "email",
-		Value:   user.Email,
-		Expires: expirationTime,
-	})
-}
-
-//JWT middleware providing authentiction check for all handlers
-func (h *Handlers) JWTAuthMiddleWare(f http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tknValid, err := h.CheckJWT(w, r)
-		if tknValid == nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if err != nil || !tknValid.Valid {
-			if err == http.ErrNoCookie || err == jwt.ErrSignatureInvalid || !tknValid.Valid {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		f(w, r)
-	}
-}
-
-//CheckJW provide JWT checking
-func (h *Handlers) CheckJWT(w http.ResponseWriter, r *http.Request) (*jwt.Token, error) {
-	// We can obtain the session token from the requests cookies, which come with every request
-	c, err := r.Cookie("token")
-	if err != nil {
-		return nil, err
-	}
-	// Get the JWT string from the cookie
-	tknStr := c.Value
-
-	// Initialize a new instance of `Claims`
-	claims := &Claims{}
-
-	// Parse the JWT string and store the result in `claims`.
-	// Note that we are passing the key in this method as well. This method will return an error
-	// if the token is invalid (if it has expired according to the expiry time we set on sign in),
-	// or if the signature does not match
-	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return tkn, nil
 
 }
 
-func (h *Handlers) APICreateTicket(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) APICreateTicket(c echo.Context) error {
 	ticket := entities.Ticket{}
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
+		return err
 	}
 	json.Unmarshal(reqBody, &ticket)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(ticket)
+	h.repo.CreateTicket(ticket)
+	if err != nil {
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
+	}
+	return c.JSONPretty(http.StatusCreated, ticket, "  ")
 }
 
-func (h *Handlers) APIGetTicket(w http.ResponseWriter, r *http.Request) {
-	id, err := getTicketID(w, r)
+func (h *Handlers) APIGetTicket(c echo.Context) error {
+	log.Println("APIGetTicket handler in action...", c.Request().Method)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		log.Println(err)
-		w.Write([]byte("Internal server Error"))
-		return
+		c.Response().WriteHeader(http.StatusNotFound)
+		return err
 	}
 	ticket, err := h.repo.GetTicket(id)
 	if err != nil {
 		log.Println(err)
-		w.Write([]byte("Internal server Error"))
-		return
+		c.Response().Write([]byte("Internal server Error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 
 	if err != nil {
-		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to get ticket")
+		fmt.Fprintf(c.Response(), "Kindly enter data with the event title and description only in order to get ticket")
+		return err
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(ticket)
+	return c.JSONPretty(http.StatusOK, ticket, "  ")
 }
 
-func (h *Handlers) APIGetListTickets(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) APIDeleteTicket(c echo.Context) error {
+	log.Println("APIDeleteTicket handler in action...", c.Request().Method)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Response().WriteHeader(http.StatusNotFound)
+		return err
+	}
+	err = h.repo.DeleteTicket(id)
+	if err != nil {
+		log.Println(err)
+		c.Response().Write([]byte("Internal server Error"))
+		return err
+	}
+
+	if err != nil {
+		fmt.Fprintf(c.Response(), "Kindly enter data with the event title and description only in order to get ticket")
+		return err
+	}
+	c.Response().WriteHeader(http.StatusOK)
+	return nil
+}
+
+func (h *Handlers) APIGetListTickets(c echo.Context) error {
+	log.Println("APIGetListTickets handler in action...", c.Request().Method)
 	ticketList, err := h.repo.ListTickets()
 	if err != nil {
 		log.Println(err)
-		w.Write([]byte("Internal server Error when retrive tickets list"))
-		return
+		c.Response().Write([]byte("Internal server Error when retrive tickets list"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	json.NewEncoder(w).Encode(ticketList)
+	return c.JSONPretty(http.StatusOK, ticketList, "  ")
 }
 
-func (h *Handlers) APIGetListTicketsByUser(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie("email")
+func (h *Handlers) APIGetListTicketsByUser(c echo.Context) error {
+	log.Println("APIGetListTicketsByUser handler in action...", c.Request().Method)
+	cookie, err := c.Cookie("email")
 	if err != nil {
 		log.Println(err)
-		w.Write([]byte("Internal server Error when email from cookies"))
-		return
+		c.Response().Write([]byte("Internal server Error when email from cookies"))
+		c.Response().WriteHeader(http.StatusNotFound)
+		return err
 	}
-	email := c.Value
-	ticketList, err := h.repo.ListTicketsByUser(email)
+	fmt.Println(cookie.Value)
+	ticketList, err := h.repo.ListTicketsByUser(cookie.Value)
 	if err != nil {
 		log.Println(err)
-		w.Write([]byte("Internal server Error when retrive tickets list"))
-		return
+		c.Response().Write([]byte("Internal server Error when retrive tickets list"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	json.NewEncoder(w).Encode(ticketList)
+	return c.JSONPretty(http.StatusOK, ticketList, "  ")
 }
 
-func (h *Handlers) APIUpdateTicket(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) APIUpdateTicket(c echo.Context) error {
+	log.Println("APIUpdateTicket handler in action...", c.Request().Method)
 	ticket := entities.Ticket{}
-	reqBody, err := ioutil.ReadAll(r.Body)
+	reqBody, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
+		fmt.Fprintf(c.Response(), "Kindly enter data with the event title and description only in order to update")
 	}
 	json.Unmarshal(reqBody, &ticket)
 	_, err = h.repo.UpdateTicket(ticket)
 	if err != nil {
 		log.Println(err)
-		w.Write([]byte("Internal server Error when updatetin particular ticket"))
-		return
+		c.Response().Write([]byte("Internal server Error when updatetin particular ticket"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(ticket)
+	return c.JSONPretty(http.StatusOK, ticket, "  ")
 }

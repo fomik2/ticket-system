@@ -1,13 +1,17 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 
-	"github.com/fomik2/ticket-system/internal/app"
+	"github.com/fomik2/ticket-system/internal/handlers"
 	rep "github.com/fomik2/ticket-system/internal/repo"
-	"github.com/fomik2/ticket-system/pkg/sqlite"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,9 +30,9 @@ type (
 	}
 )
 
-func NewConfig() (index, layout, editor, auth, user_create, http_port, css_path, database, secret string) {
+func NewConfig() (Config, error) {
 
-	cfg := &Config{}
+	cfg := Config{}
 	data, err := os.Open("./config/config.yaml")
 	if err != nil {
 		log.Println("Не могу открыть файл конфигурации", err)
@@ -42,29 +46,82 @@ func NewConfig() (index, layout, editor, auth, user_create, http_port, css_path,
 	if err != nil {
 		log.Println("Не могу распарсить файл конфигурации", err)
 	}
-	index = cfg.Index
-	editor = cfg.Editor
-	layout = cfg.Layout
-	http_port = cfg.HTTP_port
-	css_path = cfg.CSS_path
-	database = cfg.Database
-	user_create = cfg.UserCreate
-	auth = cfg.Auth
-	secret = cfg.SecretKey
-	return
+
+	return cfg, err
+}
+
+func NewDBConnection(database string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", database)
+	if err != nil {
+		return nil, fmt.Errorf("can't connect to db %w", err)
+	}
+	return db, nil
 }
 
 func main() {
-	index, layout, editor, auth, user_create, http_port, css_path, database, secret := NewConfig()
-	db, err := sqlite.New(database)
+	cfg, err := NewConfig()
+
+	index := cfg.Index
+	editor := cfg.Editor
+	layout := cfg.Layout
+	http_port := cfg.HTTP_port
+	database := cfg.Database
+	user_create := cfg.UserCreate
+	auth := cfg.Auth
+	secret := cfg.SecretKey
+
+	db, err := NewDBConnection(database)
 	if err != nil {
 		log.Println("can't connect to database", err)
 		return
 	}
 	repo := rep.New(db)
-	err = app.Run(index, layout, editor, auth, user_create, http_port, css_path, database, secret, repo)
+	// r := mux.NewRouter()
+	handler, err := handlers.New(index, layout, editor, auth, user_create, secret, repo)
 	if err != nil {
-		log.Println("Problem related to starting server", err)
+		log.Println(err)
 		return
 	}
+
+	e := echo.New()
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "method=${method}, uri=${uri}, status=${status}\n",
+	}))
+
+	//Accesible without auth
+	e.POST("/api/signin", handler.APISignin)
+	e.GET("/login", handler.Login)
+	e.POST("/login", handler.LoginHandler)
+	e.GET("/logout", handler.LogoutHandler)
+
+	// API restricted group with JWT
+
+	apiGR := e.Group("/api/tickets/")
+	config := middleware.JWTConfig{
+		Claims:     &handlers.JWTCustomClaims{},
+		SigningKey: []byte(secret),
+	}
+	apiGR.Use(middleware.JWTWithConfig(config))
+	apiGR.GET(":id", handler.APIGetTicket)
+	apiGR.GET("byuser", handler.APIGetListTicketsByUser)
+	apiGR.GET("", handler.APIGetListTickets)
+	apiGR.POST(":id", handler.APIUpdateTicket)
+	apiGR.POST("", handler.APICreateTicket)
+	apiGR.DELETE(":id", handler.APIDeleteTicket)
+
+	//HTTP restricted group auth without JWT
+	httpGR := e.Group("/")
+	httpGR.Use(handler.Authentication)
+	httpGR.GET("", handler.WelcomeHandler)
+
+	httpGR.POST("", handler.CreateTicket)
+	httpGR.POST("tickets/:id", handler.EditHandler)
+	httpGR.POST("tickets/:id/delete/", handler.DeleteHandler)
+	httpGR.GET("tickets/:id", handler.GetTicketForEdit)
+	httpGR.GET("user_create/", handler.CreateUserGet)
+	httpGR.POST("user_create/", handler.CreateUser)
+
+	e.Static("/css/", "../css")
+	e.Use(middleware.Static("./css"))
+	e.Logger.Fatal(e.Start(http_port))
 }

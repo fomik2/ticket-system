@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/labstack/echo/v4"
 
 	"github.com/fomik2/ticket-system/internal/entities"
 )
@@ -69,16 +69,6 @@ func New(index, layout, editor, auth, user_create, secret string, repo RepoInter
 	return &newHandler, nil
 }
 
-//getTicketID берет реквест и возвращает ID тикета
-func getTicketID(writer http.ResponseWriter, r *http.Request) (int, error) {
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		return id, fmt.Errorf("can't parse id.  %w", err)
-	}
-	return id, nil
-}
-
 func (h *Handlers) parseTemplates(templPathes ...string) (map[string]*template.Template, error) {
 	templs := make(map[string]*template.Template)
 	var err error
@@ -92,97 +82,104 @@ func (h *Handlers) parseTemplates(templPathes ...string) (map[string]*template.T
 	return templs, nil
 }
 
-//GetTicketForEdit выбрать заявку для редактирования и показать её
-func (h *Handlers) GetTicketForEdit(writer http.ResponseWriter, r *http.Request) {
-	log.Println("GetTicketForEdit Handler in action....", r.Method)
-
-	id, err := getTicketID(writer, r)
+// GetTicketForEdit выбрать заявку для редактирования и показать её
+func (h *Handlers) GetTicketForEdit(c echo.Context) error {
+	log.Println("GetTicketForEdit Handler in action....", c.Request().Method)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server Error"))
-		return
+		c.Response().Write([]byte("Internal server error while parsing ticket ID"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 	ticket, err := h.repo.GetTicket(id)
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server Error"))
-		return
+		c.Response().Write([]byte("Internal server error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	h.templs["editor"].Execute(writer, formData{
+	h.templs["editor"].Execute(c.Response(), formData{
 		Ticket: ticket, Errors: []string{},
 	})
 	if err != nil {
 		log.Println("can't execute template", err)
-		return
+		return err
 	}
+	return nil
 }
 
-//EditHandler редактирование заявки
-func (h *Handlers) EditHandler(writer http.ResponseWriter, r *http.Request) {
-	log.Println("Edit Handler in action....", r.Method)
-	r.ParseForm()
-	id, err := getTicketID(writer, r)
+// EditHandler редактирование заявки
+func (h *Handlers) EditHandler(c echo.Context) error {
+	log.Println("Edit Handler in action....", c.Request().Method)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server Error"))
-		return
+		c.Response().Write([]byte("Internal server error while parsing ticket ID"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 	currentTicket, err := h.repo.GetTicket(id)
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error"))
-		return
+		c.Response().Write([]byte("Internal server error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	currentTicket.Description = r.Form["description"][0]
-	currentTicket.Title = r.Form["title"][0]
-	currentTicket.Severity = r.Form["severity"][0]
+	currentTicket.Description = c.FormValue("description")
+	currentTicket.Title = c.FormValue("title")
+	currentTicket.Severity = c.FormValue("severity")
 	_, err = h.repo.UpdateTicket(currentTicket)
 	if err != nil {
 		log.Println("can't update ticket", err)
-		writer.Write([]byte("Internal server error"))
-		return
+		c.Response().Write([]byte("Internal server error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	http.Redirect(writer, r, "/", http.StatusSeeOther)
+	http.Redirect(c.Response(), c.Request(), "/", http.StatusSeeOther)
+	return nil
 }
 
-func (h *Handlers) DeleteHandler(writer http.ResponseWriter, r *http.Request) {
-	log.Println("DeleteHandler in action....", r.Method)
-	id, err := getTicketID(writer, r)
+func (h *Handlers) DeleteHandler(c echo.Context) error {
+	log.Println("DeleteHandler in action....", c.Request().Method)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server Error"))
-		return
+		c.Response().Write([]byte("Internal server eror while parsing ticket ID"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 	err = h.repo.DeleteTicket(id)
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server Error"))
-		return
+		c.Response().Write([]byte("Internal server eror"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
-	http.Redirect(writer, r, "/", http.StatusSeeOther)
+	http.Redirect(c.Response(), c.Request(), "/", http.StatusSeeOther)
+	return nil
 }
 
-//CreateTicket создание новой заявки
-func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
-	log.Println("CreateTicket handler in action....", r.Method)
+// CreateTicket создание новой заявки
+func (h *Handlers) CreateTicket(c echo.Context) error {
+	log.Println("CreateTicket handler in action....", c.Request().Method)
 	//get session values
-	session, err := h.sessionStore.Get(r, "session.id")
+	session, err := h.sessionStore.Get(c.Request(), "session.id")
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error"))
-		return
+		c.Response().Write([]byte("Internal server error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 	userEmail := session.Values["email"]
-	r.ParseForm()
 	responseData := entities.Ticket{
-		Title:       r.Form["title"][0],
-		Description: r.Form["description"][0],
-		Severity:    r.Form["severity"][0],
+		Title:       c.FormValue("title"),
+		Description: c.FormValue("description"),
+		Severity:    c.FormValue("severity"),
 		Status:      "Создана",
 		CreatedAt:   time.Now().Local(),
 		OwnerEmail:  userEmail,
 	}
-	fmt.Println(responseData)
 	errors := []string{}
 	if responseData.Title == "" {
 		errors = append(errors, "Введите название заявки")
@@ -194,42 +191,49 @@ func (h *Handlers) CreateTicket(writer http.ResponseWriter, r *http.Request) {
 		tickets, err := h.repo.ListTickets()
 		if err != nil {
 			log.Println("can't load tickets, check data files", err)
-			writer.Write([]byte("Internal server error"))
-			return
+			c.Response().Write([]byte("Internal server error"))
+			c.Response().WriteHeader(http.StatusInternalServerError)
+			return err
 		}
-		h.templs["index"].Execute(writer, formData{Ticket: responseData, Errors: errors, TicketList: tickets})
+		h.templs["index"].Execute(c.Response(), formData{Ticket: responseData, Errors: errors, TicketList: tickets})
 		if err != nil {
 			log.Println(err)
-			writer.Write([]byte("Internal server error, can't load template"))
-			return
+			c.Response().Write([]byte("Internal server error, can't load template"))
+			c.Response().WriteHeader(http.StatusInternalServerError)
+			return err
 		}
 	} else {
 		_, err := h.repo.CreateTicket(responseData)
 		if err != nil {
 			log.Println(err)
-			writer.Write([]byte("Internal server error"))
-			return
+			c.Response().Write([]byte("Internal server error"))
+			c.Response().WriteHeader(http.StatusInternalServerError)
+			return err
 		}
-		http.Redirect(writer, r, "/", http.StatusSeeOther)
+		http.Redirect(c.Response(), c.Request(), "/", http.StatusSeeOther)
 	}
+	return nil
 }
 
-//welcomeHandler отображение формы и списка всех заявок
-func (h *Handlers) WelcomeHandler(writer http.ResponseWriter, r *http.Request) {
-	log.Println("Welcome handler in action....", r.Method)
+// welcomeHandler отображение формы и списка всех заявок
+func (h *Handlers) WelcomeHandler(c echo.Context) error {
+	log.Println("Welcome handler in action....", c.Request().Method)
 	tickets, err := h.repo.ListTickets()
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error"))
-		return
+		c.Response().Write([]byte("Internal server error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	} else {
-		h.templs["index"].Execute(writer, formData{
+		h.templs["index"].Execute(c.Response(), formData{
 			Ticket: entities.Ticket{}, Errors: []string{}, TicketList: tickets,
 		})
 	}
 	if err != nil {
 		log.Println(err)
-		writer.Write([]byte("Internal server error"))
-		return
+		c.Response().Write([]byte("Internal server error"))
+		c.Response().WriteHeader(http.StatusInternalServerError)
+		return err
 	}
+	return nil
 }
