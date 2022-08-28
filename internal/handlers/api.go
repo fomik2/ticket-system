@@ -72,7 +72,7 @@ func (h *Handlers) APISignin(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
+	//Saving email to cookie for futher using in ListTicketsByUser method
 	cookie := new(http.Cookie)
 	cookie.Name = "email"
 	cookie.Value = user.Email

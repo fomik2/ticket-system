@@ -77,7 +77,7 @@ func main() {
 		return
 	}
 	repo := rep.New(db)
-	// r := mux.NewRouter()
+
 	handler, err := handlers.New(index, layout, editor, auth, user_create, secret, repo)
 	if err != nil {
 		log.Println(err)
