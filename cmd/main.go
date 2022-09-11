@@ -51,6 +51,7 @@ func NewConfig() (Config, error) {
 	return cfg, err
 }
 
+// NewDBConnection connet to DB
 func NewDBConnection(database string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", database)
 	if err != nil {
@@ -95,6 +96,7 @@ func main() {
 	e.POST("/login", handler.LoginHandler)
 	e.GET("/logout", handler.LogoutHandler)
 
+	//Prometheus metrics
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(e)
 
