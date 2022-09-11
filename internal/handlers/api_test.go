@@ -3,12 +3,14 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/fomik2/ticket-system/internal/entities"
 	"github.com/fomik2/ticket-system/mocks"
+	"github.com/gorilla/sessions"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -55,26 +57,31 @@ func TestApiGetTicket(t *testing.T) {
 func TestCreateTicket(t *testing.T) {
 	repo := mocks.RepoInterface{}
 	handler := Handlers{
-		repo: &repo,
+		repo:         &repo,
+		sessionStore: sessions.NewCookieStore([]byte("my_secret_key")),
 	}
-	json := `{
-		"Title":"Test Title",
-		"Description": "Test Description",
-		"Severity":    "High",
-	}`
+
 	ticket := entities.Ticket{
 		Title:       "Test Title",
 		Description: "Test Description",
 		Status:      "Created",
-		Severity:    "High",
+		Severity:    "5",
 		SLA:         time.Now().Local(),
 		CreatedAt:   time.Now().Local(),
 		Number:      10,
 		OwnerEmail:  "test@test.com",
 	}
+	var ticketList []entities.Ticket
+	ticketList = append(ticketList, ticket)
 	repo.On("CreateTicket", ticket).Return(ticket, nil)
+	repo.On("ListTickets").Return(ticketList, nil)
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(json))
+	f := make(url.Values)
+	f.Set("title", "Test Title")
+	f.Set("description", "Test description")
+	f.Set("severity", "5")
+
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(f.Encode()))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 
