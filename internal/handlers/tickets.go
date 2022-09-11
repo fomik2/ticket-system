@@ -172,7 +172,6 @@ func (h *Handlers) CreateTicket(c echo.Context) error {
 		return err
 	}
 	userEmail := session.Values["email"]
-	fmt.Println("FORM VALUE: ", c.FormValue("title"))
 	responseData := entities.Ticket{
 		Title:       c.FormValue("title"),
 		Description: c.FormValue("description"),
