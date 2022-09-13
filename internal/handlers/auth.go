@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -70,7 +71,7 @@ func (h *Handlers) LoginHandler(c echo.Context) error {
 	if user.Name == "" {
 		c.Response().Write([]byte("Unauthorized. (No user found)"))
 		c.Response().WriteHeader(http.StatusUnauthorized)
-		return err
+		return errors.New("User unauthorized")
 	}
 
 	checkPass, err := h.CheckPasswordHash(user.Password, c.FormValue("password"))
@@ -78,7 +79,7 @@ func (h *Handlers) LoginHandler(c echo.Context) error {
 		log.Println(err)
 		c.Response().Write([]byte("Internal server error while compare password with hash"))
 		c.Response().WriteHeader(http.StatusInternalServerError)
-		return err
+		return errors.New("User unauthorized")
 	}
 
 	if checkPass {

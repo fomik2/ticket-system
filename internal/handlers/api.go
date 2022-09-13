@@ -165,7 +165,7 @@ func (h *Handlers) APIGetListTicketsByUser(c echo.Context) error {
 		c.Response().WriteHeader(http.StatusNotFound)
 		return err
 	}
-	fmt.Println(cookie.Value)
+
 	ticketList, err := h.repo.ListTicketsByUser(cookie.Value)
 	if err != nil {
 		log.Println(err)
