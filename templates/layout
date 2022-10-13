@@ -35,14 +35,15 @@
   
   <input type="radio" id="tab1" name="tab-control" checked>
   <input type="radio" id="tab2" name="tab-control">
-  <input type="radio" id="tab3" name="tab-control">  
-  <input type="radio" id="tab4" name="tab-control">
+  <input type="radio" id="tab3" name="tab-control"> 
+  <input type="radio" id="tab4" name="tab-control">  
   <ul>
     <li title="Features"><label for="tab1" role="button"><span>Создание новой заявки</span></label></li>
     <li title="Delivery Contents"><label for="tab2" role="button"><span>Список заявок</span></label></li>
+    <li title="User Creation"><label for="tab3" role="button"><a href="/user_create/"><span>Пользователи</span></a></label></li>
+    <li title="Logout"><label for="tab3" role="button"><a href="/logout"><span>Logout</span></a></label></li>
   </ul>
   
-  <div class="slider"><div class="indicator"></div></div>
   <div class="content">
 
     {{ block "body" . }}

@@ -2,8 +2,12 @@ http_port: ':5002'
 templ_layout: './templates/layout'
 templ_index: './templates/index'
 templ_editor: './templates/editor'
+templ_user_create: './templates/user_create'
+templ_auth: './templates/auth'
+session_and_jwt_secret: 'my_secret_key'
 
-tickets: 'tickets.json'
-counter: 'counter'
+
 
 css_path: './css'
+
+db_file: 'database.db'
